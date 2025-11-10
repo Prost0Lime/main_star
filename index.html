@@ -13,28 +13,33 @@
       <defs>
         <!-- Небо: градиент от вечера к ночи (анимируется классами) -->
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="skyTop" offset="0%" stop-color="#304b7a"/>
-          <stop id="skyMid" offset="60%" stop-color="#8aa1d1"/>
-          <stop id="skyBot" offset="100%" stop-color="#f2b36a"/>
+          <stop id="skyTop" offset="0%" stop-color="#4f7fbc"/>
+          <stop id="skyMid" offset="60%" stop-color="#9ab6e6"/>
+          <stop id="skyBot" offset="100%" stop-color="#f6c38f"/>
         </linearGradient>
 
         <linearGradient id="duneGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#26304a" />
-          <stop offset="60%" stop-color="#1c2439" />
-          <stop offset="100%" stop-color="#12192b" />
+          <stop offset="0%" stop-color="#242f47" />
+          <stop offset="60%" stop-color="#1a2338" />
+          <stop offset="100%" stop-color="#111829" />
         </linearGradient>
 
         <linearGradient id="hillGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#182033" />
-          <stop offset="50%" stop-color="#141c2d" />
-          <stop offset="100%" stop-color="#101623" />
+          <stop offset="0%" stop-color="#141d30" />
+          <stop offset="50%" stop-color="#101828" />
+          <stop offset="100%" stop-color="#0c1421" />
         </linearGradient>
 
         <!-- Сумеречное свечение у горизонта -->
         <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="horizonTop" offset="0%" stop-color="#f7c27b" stop-opacity="0.95" />
-          <stop id="horizonMid" offset="50%" stop-color="#563564" stop-opacity="0.55" />
+          <stop id="horizonTop" offset="0%" stop-color="#f9c989" stop-opacity="0.94" />
+          <stop id="horizonMid" offset="50%" stop-color="#644173" stop-opacity="0.52" />
           <stop id="horizonBot" offset="100%" stop-color="#0a0e14" stop-opacity="0" />
+        </linearGradient>
+
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0b111d" />
+          <stop offset="100%" stop-color="#050b16" />
         </linearGradient>
 
         <!-- Солнечный диск с мягким свечением -->
@@ -42,31 +47,6 @@
           <stop offset="0%" stop-color="#fff6c0" stop-opacity="1"/>
           <stop offset="60%" stop-color="#ffd27a" stop-opacity="0.85"/>
           <stop offset="100%" stop-color="#ff9a3c" stop-opacity="0"/>
-        </radialGradient>
-
-        <!-- Ламповый тёплый свет фонаря -->
-        <radialGradient id="lampGlow" cx="50%" cy="35%" r="90%">
-          <stop offset="0%" stop-color="rgba(255,225,150,0.95)"/>
-          <stop offset="40%" stop-color="rgba(255,205,110,0.65)"/>
-          <stop offset="100%" stop-color="rgba(255,175,70,0)"/>
-        </radialGradient>
-
-        <radialGradient id="groundGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="rgba(255,195,120,0.4)" />
-          <stop offset="80%" stop-color="rgba(255,195,120,0.05)" />
-          <stop offset="100%" stop-color="rgba(255,195,120,0)" />
-        </radialGradient>
-
-        <!-- Туман/световой конус от фонаря -->
-        <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="rgba(255,214,140,0.55)"/>
-          <stop offset="40%" stop-color="rgba(255,194,110,0.22)"/>
-          <stop offset="100%" stop-color="rgba(255,194,110,0)"/>
-        </linearGradient>
-
-        <radialGradient id="lampCore" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ffe6a6" />
-          <stop offset="100%" stop-color="#f7b95d" />
         </radialGradient>
 
         <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
@@ -106,46 +86,12 @@
 
         <!-- Земля/горизонт -->
         <g id="ground">
-          <rect x="0" y="600" width="390" height="244" fill="#0a0e14"/>
-          <path id="horizonGlow" d="M0,620 q70,-28 140,-18 q58,10 122,-8 q54,-14 110,18 l18,12 v120 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
+          <rect x="0" y="600" width="390" height="244" fill="url(#groundGrad)"/>
+          <path id="horizonGlow" d="M0,622 q72,-34 142,-20 q58,12 120,-6 q60,-18 128,26 l0,222 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
           <!-- Дальний горизонт (силуэты холмов) -->
-          <path d="M-30,640 q60,-26 120,-12 q44,12 88,4 q52,-10 102,10 q40,14 120,-4 v216 H-30 Z"
+          <path d="M-30,644 q60,-28 120,-14 q46,12 90,2 q52,-12 106,12 q42,16 116,-2 v202 H-30 Z"
                 fill="url(#duneGrad)"/>
-          <path d="M-20,680 q70,-32 140,-16 q46,12 96,6 q50,-10 120,18 V844 H-20 Z" fill="url(#hillGrad)"/>
-          <ellipse id="lampGround" cx="300" cy="732" rx="68" ry="24" fill="url(#groundGlow)" opacity="0" />
-        </g>
-
-        <!-- Фонарь -->
-        <g id="lamp" transform="translate(300,638)">
-          <!-- Столб -->
-          <path d="M-8,-14 h16 l6,160 h-28z" fill="#161e2d"/>
-          <rect x="-6" y="-142" width="12" height="130" rx="4" fill="#212c3f"/>
-          <rect x="-10" y="-18" width="20" height="12" rx="4" fill="#121722" opacity="0.9"/>
-          <!-- Головка фонаря -->
-          <path d="M-24,-152 q24,-18 48,0 l-6,12 h-36z" fill="#1c2536"/>
-          <ellipse cx="0" cy="-136" rx="24" ry="14" fill="#242f45"/>
-          <ellipse cx="0" cy="-140" rx="18" ry="9" fill="#1a2334"/>
-          <circle id="bulb" cx="0" cy="-136" r="10" fill="#2a2f3a"/>
-          <!-- Тёплая засветка (включается ночью) -->
-          <g id="lampLight" opacity="0">
-            <circle cx="0" cy="-136" r="28" fill="url(#lampGlow)" />
-            <path d="M-70,-118 Q0,-78 70,-118 L110,68 H-110Z" fill="url(#lampCone)" opacity="0.7"/>
-            <ellipse cx="0" cy="-136" rx="12" ry="12" fill="url(#lampCore)" opacity="0.9"/>
-          </g>
-        </g>
-
-        <!-- Персонаж-наблюдатель -->
-        <g id="boy" transform="translate(122,642)">
-          <ellipse cx="12" cy="10" rx="20" ry="8" fill="#05090f" opacity="0.65"/>
-          <path d="M20,-30 q16,10 16,30 v52 h-48 v-52 q0,-20 16,-30z" fill="#1a2334"/>
-          <rect x="-6" y="18" width="16" height="34" rx="6" fill="#121827"/>
-          <rect x="18" y="18" width="16" height="34" rx="6" fill="#121827"/>
-          <path d="M-6,-12 q14,-12 22,0 t6,24 q-4,16 -18,16 q-16,0 -18,-16 q-2,-12 8,-24z" fill="#29344b"/>
-          <circle cx="20" cy="-58" r="22" fill="#1e2a40"/>
-          <path d="M0,-68 q10,-18 30,-18 q26,0 32,26 q4,20 -12,32 q-12,8 -24,4 q-18,-6 -24,-24 z" fill="#2c3750"/>
-          <circle cx="32" cy="-58" r="4" fill="#f7f9ff"/>
-          <path d="M36,-40 q6,12 -4,18 q-10,6 -18,0 q-8,-8 -2,-18" fill="#0f1624" opacity="0.4"/>
-          <path d="M-8,-4 q18,10 28,10 q14,0 26,-12" fill="#0f1624" opacity="0.55"/>
+          <path d="M-24,688 q72,-36 140,-18 q48,12 100,8 q52,-8 124,24 V844 H-24 Z" fill="url(#hillGrad)"/>
         </g>
 
         <!-- Текст-приглашение -->

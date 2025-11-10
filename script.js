@@ -20,9 +20,6 @@ const horizonBot = document.getElementById('horizonBot');
 const sunGroup = document.getElementById('sunGroup');
 const sun = document.getElementById('sun');
 const clouds = document.getElementById('clouds');
-const lampLight = document.getElementById('lampLight');
-const bulb = document.getElementById('bulb');
-const lampGround = document.getElementById('lampGround');
 const horizonGlow = document.getElementById('horizonGlow');
 const introStarsGroup = document.getElementById('introStars');
 const introStarDots = introStarsGroup ? Array.from(introStarsGroup.querySelectorAll('circle')) : [];
@@ -40,23 +37,21 @@ const dpr = Math.min(2, window.devicePixelRatio || 1);
 const INTRO = {
   SUNSET_DURATION: 4.8,
   BLUE_HOUR: 1.8,
-  NIGHT_FALL: 2.2,
-  STARS_DELAY: 0.25,
-  STARS_FADE: 1.8,
-  LAMP_DELAY: 0.2,
-  LAMP_FADE: 1.6,
-  HOLD: 0.35,
+  NIGHT_FALL: 2.4,
+  STARS_DELAY: 0.2,
+  STARS_FADE: 1.9,
+  HOLD: 0.45,
 };
 
 const CAMERA = {
-  START_OFFSET: 0.55,
-  DURATION: 3.2,
-  LIFT: 180,
-  SCALE: 1.06,
+  START_OFFSET: 0.62,
+  DURATION: 3.4,
+  LIFT: 260,
+  SCALE: 1.1,
 };
 
 INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
-const finaleTail = Math.max(INTRO.STARS_DELAY + INTRO.STARS_FADE, INTRO.LAMP_DELAY + INTRO.LAMP_FADE);
+const finaleTail = INTRO.STARS_DELAY + INTRO.STARS_FADE;
 INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.HOLD;
 
 let startTime = null;
@@ -72,20 +67,15 @@ function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
 function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
 
 const SKY = {
-  top: { day: '#304b7a', dusk: '#26365d', night: '#050b16' },
-  mid: { day: '#8aa1d1', dusk: '#3a4870', night: '#071327' },
-  bot: { day: '#f2b36a', dusk: '#5d3769', night: '#0b1a2e' },
+  top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
+  mid: { day: '#9ab6e6', dusk: '#465c87', night: '#081327' },
+  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0c1b31' },
 };
 
 const HORIZON = {
-  top: { dusk: '#f7c27b', night: '#18233d' },
-  mid: { dusk: '#563564', night: '#10192c' },
-  botOpacity: { dusk: 0.22, night: 0 },
-};
-
-const LAMP = {
-  bulbOff: '#2a2f3a',
-  bulbOn: '#ffc66e',
+  top: { dusk: '#f9c989', night: '#17233d' },
+  mid: { dusk: '#644173', night: '#0f192c' },
+  botOpacity: { dusk: 0.2, night: 0 },
 };
 
 function animateIntro(ts){
@@ -109,12 +99,13 @@ function animateIntro(ts){
   skyMid.setAttribute('stop-color', mixColor(stageMid, SKY.mid.night, twilightProgress));
   skyBot.setAttribute('stop-color', mixColor(stageBot, SKY.bot.night, twilightProgress));
 
-  horizonTop.setAttribute('stop-color', mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress));
-  horizonTop.setAttribute('stop-opacity', (0.95 * (1 - twilightProgress * 0.75)).toFixed(3));
+  const horizonTopColor = mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress);
+  horizonTop.setAttribute('stop-color', horizonTopColor);
+  horizonTop.setAttribute('stop-opacity', (0.94 * (1 - twilightProgress * 0.7)).toFixed(3));
   horizonMid.setAttribute('stop-color', mixColor(HORIZON.mid.dusk, HORIZON.mid.night, twilightProgress));
-  horizonMid.setAttribute('stop-opacity', (0.55 * (1 - twilightProgress * 0.9)).toFixed(3));
+  horizonMid.setAttribute('stop-opacity', (0.52 * (1 - twilightProgress * 0.88)).toFixed(3));
   horizonBot.setAttribute('stop-opacity', (HORIZON.botOpacity.dusk * (1 - twilightProgress)).toFixed(3));
-  horizonGlow.setAttribute('opacity', (0.9 * (1 - twilightProgress) * (1 - nightProgress * 0.85)).toFixed(3));
+  horizonGlow.setAttribute('opacity', (0.92 * (1 - twilightProgress) * (1 - nightProgress * 0.8)).toFixed(3));
 
   const sunY = lerp(560, 720, sunsetProgress);
   const sunScale = lerp(1, 0.78, sunsetProgress);
@@ -134,18 +125,10 @@ function animateIntro(ts){
   if (scene) {
     const lift = lerp(0, CAMERA.LIFT, cameraProgress);
     const scale = lerp(1, CAMERA.SCALE, cameraProgress);
-    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
+    scene.setAttribute('transform', `translate(0 ${(-lift).toFixed(2)}) scale(${scale.toFixed(3)})`);
   }
   const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
   intro.style.opacity = (1 - fadeBlend).toFixed(3);
-
-  const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;
-  const lampProgress = easeInOutCubic(clamp((t - lampStart) / INTRO.LAMP_FADE, 0, 1));
-  lampLight.setAttribute('opacity', lampProgress.toFixed(3));
-  bulb.setAttribute('fill', mixColor(LAMP.bulbOff, LAMP.bulbOn, lampProgress));
-  if (lampGround) {
-    lampGround.setAttribute('opacity', (0.7 * lampProgress).toFixed(3));
-  }
 
   if (introStarsGroup) {
     const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
@@ -160,11 +143,6 @@ function animateIntro(ts){
   }
 
   if (t >= INTRO.TOTAL) {
-    lampLight.setAttribute('opacity', '1');
-    bulb.setAttribute('fill', LAMP.bulbOn);
-    if (lampGround) {
-      lampGround.setAttribute('opacity', '0.7');
-    }
     endIntro();
     return;
   }
