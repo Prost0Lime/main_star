@@ -10,6 +10,7 @@ const FEATURED_COUNT = Math.min(10, MEMORIES.length);
 
 // === ССЫЛКИ НА СЛОИ ===
 const intro = document.getElementById('intro');
+const scene = document.getElementById('scene');
 const skyTop = document.getElementById('skyTop');
 const skyMid = document.getElementById('skyMid');
 const skyBot = document.getElementById('skyBot');
@@ -50,8 +51,8 @@ const INTRO = {
 const CAMERA = {
   START_OFFSET: 0.55,
   DURATION: 3.2,
-  LIFT: 26,
-  SCALE: 1.05,
+  LIFT: 180,
+  SCALE: 1.06,
 };
 
 INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
@@ -125,10 +126,12 @@ function animateIntro(ts){
 
   const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
   const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
-  const lift = lerp(0, -CAMERA.LIFT, cameraProgress);
-  const scale = lerp(1, CAMERA.SCALE, cameraProgress);
   const cameraFade = clamp(cameraProgress, 0, 1);
-  intro.style.transform = `translateY(${lift}%) scale(${scale.toFixed(3)})`;
+  if (scene) {
+    const lift = lerp(0, CAMERA.LIFT, cameraProgress);
+    const scale = lerp(1, CAMERA.SCALE, cameraProgress);
+    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
+  }
   intro.style.opacity = (1 - cameraFade * 0.35).toFixed(3);
 
   const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;

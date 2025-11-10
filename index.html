@@ -74,84 +74,86 @@
         </filter>
       </defs>
 
-      <!-- Небо -->
-      <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
+      <g id="scene">
+        <!-- Небо -->
+        <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
 
-      <!-- Солнце -->
-      <g id="sunGroup">
-        <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
-      </g>
-
-      <!-- Пара лёгких облаков -->
-      <!-- Тучки -->
-      <g id="clouds" fill="#fef9ff" opacity="0.95" filter="url(#softBlur)">
-        <path d="M-120,250 q40,-26 90,-8 q32,-34 74,-4 q32,-30 70,-10 q50,-22 104,6 q48,30 -24,46 q-50,10 -138,12 q-110,2 -144,-14 q-70,-18 -32,-28z"/>
-        <path d="M-80,320 q60,-22 108,-6 q42,-32 86,-6 q40,-28 82,-4 q60,-24 128,4 q48,28 -18,46 q-58,14 -158,14 q-130,0 -164,-16 q-80,-20 -44,-32z"/>
-      </g>
-
-      <!-- Звёзды ночного неба (постепенно проявляются) -->
-      <g id="introStars" opacity="0" fill="#f7fbff">
-        <circle cx="58" cy="150" r="1.3" data-base-r="1.3" />
-        <circle cx="124" cy="108" r="1.7" data-base-r="1.7" />
-        <circle cx="198" cy="88" r="1.2" data-base-r="1.2" />
-        <circle cx="308" cy="136" r="1.5" data-base-r="1.5" />
-        <circle cx="246" cy="198" r="1.3" data-base-r="1.3" />
-        <circle cx="86" cy="212" r="1.6" data-base-r="1.6" />
-        <circle cx="166" cy="176" r="1.35" data-base-r="1.35" />
-        <circle cx="292" cy="78" r="1.2" data-base-r="1.2" />
-        <circle cx="36" cy="110" r="1.05" data-base-r="1.05" />
-        <circle cx="348" cy="190" r="1.3" data-base-r="1.3" />
-      </g>
-
-      <!-- Земля/горизонт -->
-      <g id="ground">
-        <rect x="0" y="600" width="390" height="244" fill="#0a0e14"/>
-        <path id="horizonGlow" d="M0,620 q70,-28 140,-18 q58,10 122,-8 q54,-14 110,18 l18,12 v120 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
-        <!-- Дальний горизонт (силуэты холмов) -->
-        <path d="M-30,640 q60,-26 120,-12 q44,12 88,4 q52,-10 102,10 q40,14 120,-4 v216 H-30 Z"
-              fill="url(#duneGrad)"/>
-        <path d="M-20,680 q70,-32 140,-16 q46,12 96,6 q50,-10 120,18 V844 H-20 Z" fill="url(#hillGrad)"/>
-        <ellipse id="lampGround" cx="300" cy="732" rx="68" ry="24" fill="url(#groundGlow)" opacity="0" />
-      </g>
-
-      <!-- Фонарь -->
-      <g id="lamp" transform="translate(300,638)">
-        <!-- Столб -->
-        <path d="M-8,-14 h16 l6,160 h-28z" fill="#161e2d"/>
-        <rect x="-6" y="-142" width="12" height="130" rx="4" fill="#212c3f"/>
-        <rect x="-10" y="-18" width="20" height="12" rx="4" fill="#121722" opacity="0.9"/>
-        <!-- Головка фонаря -->
-        <path d="M-24,-152 q24,-18 48,0 l-6,12 h-36z" fill="#1c2536"/>
-        <ellipse cx="0" cy="-136" rx="24" ry="14" fill="#242f45"/>
-        <ellipse cx="0" cy="-140" rx="18" ry="9" fill="#1a2334"/>
-        <circle id="bulb" cx="0" cy="-136" r="10" fill="#2a2f3a"/>
-        <!-- Тёплая засветка (включается ночью) -->
-        <g id="lampLight" opacity="0">
-          <circle cx="0" cy="-136" r="28" fill="url(#lampGlow)" />
-          <path d="M-70,-118 Q0,-78 70,-118 L110,68 H-110Z" fill="url(#lampCone)" opacity="0.7"/>
-          <ellipse cx="0" cy="-136" rx="12" ry="12" fill="url(#lampCore)" opacity="0.9"/>
+        <!-- Солнце -->
+        <g id="sunGroup">
+          <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
         </g>
-      </g>
 
-      <!-- Персонаж-наблюдатель -->
-      <g id="boy" transform="translate(122,642)">
-        <ellipse cx="12" cy="10" rx="20" ry="8" fill="#05090f" opacity="0.65"/>
-        <path d="M20,-30 q16,10 16,30 v52 h-48 v-52 q0,-20 16,-30z" fill="#1a2334"/>
-        <rect x="-6" y="18" width="16" height="34" rx="6" fill="#121827"/>
-        <rect x="18" y="18" width="16" height="34" rx="6" fill="#121827"/>
-        <path d="M-6,-12 q14,-12 22,0 t6,24 q-4,16 -18,16 q-16,0 -18,-16 q-2,-12 8,-24z" fill="#29344b"/>
-        <circle cx="20" cy="-58" r="22" fill="#1e2a40"/>
-        <path d="M0,-68 q10,-18 30,-18 q26,0 32,26 q4,20 -12,32 q-12,8 -24,4 q-18,-6 -24,-24 z" fill="#2c3750"/>
-        <circle cx="32" cy="-58" r="4" fill="#f7f9ff"/>
-        <path d="M36,-40 q6,12 -4,18 q-10,6 -18,0 q-8,-8 -2,-18" fill="#0f1624" opacity="0.4"/>
-        <path d="M-8,-4 q18,10 28,10 q14,0 26,-12" fill="#0f1624" opacity="0.55"/>
-      </g>
+        <!-- Пара лёгких облаков -->
+        <!-- Тучки -->
+        <g id="clouds" fill="#fef9ff" opacity="0.95" filter="url(#softBlur)">
+          <path d="M-120,250 q40,-26 90,-8 q32,-34 74,-4 q32,-30 70,-10 q50,-22 104,6 q48,30 -24,46 q-50,10 -138,12 q-110,2 -144,-14 q-70,-18 -32,-28z"/>
+          <path d="M-80,320 q60,-22 108,-6 q42,-32 86,-6 q40,-28 82,-4 q60,-24 128,4 q48,28 -18,46 q-58,14 -158,14 q-130,0 -164,-16 q-80,-20 -44,-32z"/>
+        </g>
 
-      <!-- Текст-приглашение -->
-      <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
-            style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
-        Смотри, как день становится ночью…
-      </text>
+        <!-- Звёзды ночного неба (постепенно проявляются) -->
+        <g id="introStars" opacity="0" fill="#f7fbff">
+          <circle cx="58" cy="150" r="1.3" data-base-r="1.3" />
+          <circle cx="124" cy="108" r="1.7" data-base-r="1.7" />
+          <circle cx="198" cy="88" r="1.2" data-base-r="1.2" />
+          <circle cx="308" cy="136" r="1.5" data-base-r="1.5" />
+          <circle cx="246" cy="198" r="1.3" data-base-r="1.3" />
+          <circle cx="86" cy="212" r="1.6" data-base-r="1.6" />
+          <circle cx="166" cy="176" r="1.35" data-base-r="1.35" />
+          <circle cx="292" cy="78" r="1.2" data-base-r="1.2" />
+          <circle cx="36" cy="110" r="1.05" data-base-r="1.05" />
+          <circle cx="348" cy="190" r="1.3" data-base-r="1.3" />
+        </g>
+
+        <!-- Земля/горизонт -->
+        <g id="ground">
+          <rect x="0" y="600" width="390" height="244" fill="#0a0e14"/>
+          <path id="horizonGlow" d="M0,620 q70,-28 140,-18 q58,10 122,-8 q54,-14 110,18 l18,12 v120 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
+          <!-- Дальний горизонт (силуэты холмов) -->
+          <path d="M-30,640 q60,-26 120,-12 q44,12 88,4 q52,-10 102,10 q40,14 120,-4 v216 H-30 Z"
+                fill="url(#duneGrad)"/>
+          <path d="M-20,680 q70,-32 140,-16 q46,12 96,6 q50,-10 120,18 V844 H-20 Z" fill="url(#hillGrad)"/>
+          <ellipse id="lampGround" cx="300" cy="732" rx="68" ry="24" fill="url(#groundGlow)" opacity="0" />
+        </g>
+
+        <!-- Фонарь -->
+        <g id="lamp" transform="translate(300,638)">
+          <!-- Столб -->
+          <path d="M-8,-14 h16 l6,160 h-28z" fill="#161e2d"/>
+          <rect x="-6" y="-142" width="12" height="130" rx="4" fill="#212c3f"/>
+          <rect x="-10" y="-18" width="20" height="12" rx="4" fill="#121722" opacity="0.9"/>
+          <!-- Головка фонаря -->
+          <path d="M-24,-152 q24,-18 48,0 l-6,12 h-36z" fill="#1c2536"/>
+          <ellipse cx="0" cy="-136" rx="24" ry="14" fill="#242f45"/>
+          <ellipse cx="0" cy="-140" rx="18" ry="9" fill="#1a2334"/>
+          <circle id="bulb" cx="0" cy="-136" r="10" fill="#2a2f3a"/>
+          <!-- Тёплая засветка (включается ночью) -->
+          <g id="lampLight" opacity="0">
+            <circle cx="0" cy="-136" r="28" fill="url(#lampGlow)" />
+            <path d="M-70,-118 Q0,-78 70,-118 L110,68 H-110Z" fill="url(#lampCone)" opacity="0.7"/>
+            <ellipse cx="0" cy="-136" rx="12" ry="12" fill="url(#lampCore)" opacity="0.9"/>
+          </g>
+        </g>
+
+        <!-- Персонаж-наблюдатель -->
+        <g id="boy" transform="translate(122,642)">
+          <ellipse cx="12" cy="10" rx="20" ry="8" fill="#05090f" opacity="0.65"/>
+          <path d="M20,-30 q16,10 16,30 v52 h-48 v-52 q0,-20 16,-30z" fill="#1a2334"/>
+          <rect x="-6" y="18" width="16" height="34" rx="6" fill="#121827"/>
+          <rect x="18" y="18" width="16" height="34" rx="6" fill="#121827"/>
+          <path d="M-6,-12 q14,-12 22,0 t6,24 q-4,16 -18,16 q-16,0 -18,-16 q-2,-12 8,-24z" fill="#29344b"/>
+          <circle cx="20" cy="-58" r="22" fill="#1e2a40"/>
+          <path d="M0,-68 q10,-18 30,-18 q26,0 32,26 q4,20 -12,32 q-12,8 -24,4 q-18,-6 -24,-24 z" fill="#2c3750"/>
+          <circle cx="32" cy="-58" r="4" fill="#f7f9ff"/>
+          <path d="M36,-40 q6,12 -4,18 q-10,6 -18,0 q-8,-8 -2,-18" fill="#0f1624" opacity="0.4"/>
+          <path d="M-8,-4 q18,10 28,10 q14,0 26,-12" fill="#0f1624" opacity="0.55"/>
+        </g>
+
+        <!-- Текст-приглашение -->
+        <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
+              style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
+          Смотри, как день становится ночью…
+        </text>
+      </g>
     </svg>
 
     <!-- После интро: фоновой канвас со звёздами и слой звёзд -->

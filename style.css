@@ -5,7 +5,7 @@ body{margin:0;background:#04070f;color:#fff;font-family:-apple-system,BlinkMacSy
 @supports (height: 100dvh){#app{height:100dvh;min-height:100dvh}}
 
 /* INTRO */
-#intro{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:5;transition:opacity .8s ease;will-change:transform,opacity;transform-origin:50% 85%;transform:translateY(0) scale(1)}
+#intro{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:5;transition:opacity .8s ease}
 #intro.hidden{opacity:0;pointer-events:none}
 #intro #sunGroup{transform-origin:195px 560px} /* pivot для анимации солнца */
 
