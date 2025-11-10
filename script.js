@@ -80,6 +80,19 @@ let activeConstellation = [];
 let pinchActive = false;
 let pinchBase = null;
 const activePointers = new Map();
+let allStars = [];
+const visitedStars = new Set();
+let pendingHeartFinale = false;
+let heartFinaleStarted = false;
+let heartLineSvg = null;
+let heartFinalLayout = [];
+let heartLineReady = false;
+let heartLineTimer = null;
+let pendingHeartOutlineRefresh = false;
+const HEART_MOVE_DURATION = 2.8;
+const HEART_MOVE_STAGGER = 0.08;
+const HEART_LINE_DELAY = 0.6;
+const HEART_LINE_DRAW_DURATION = 5.4;
 
 const CONSTELLATION_TEMPLATE = [
   { id: 1, x: 64, y: 312, size: 11.5, tw: 3.4 },
@@ -330,8 +343,8 @@ function updateSpaceTransform(){
   viewX = clamp(viewX, 0, maxViewX);
   viewY = clamp(viewY, 0, maxViewY);
   const scale = spaceViewScale;
-  const tx = -viewX / scale;
-  const ty = -viewY / scale;
+  const tx = -viewX;
+  const ty = -viewY;
   space.style.transform = `scale(${scale}) translate(${tx}px, ${ty}px)`;
 }
 
@@ -424,7 +437,15 @@ function resize(){
 
   updateSpaceTransform();
   genStarfield();
-  if (activeConstellation && activeConstellation.length){
+  if (heartFinaleStarted){
+    heartFinalLayout = computeHeartLayout();
+    applyHeartPositions(heartFinalLayout, false);
+    if (heartLineReady){
+      createHeartOutline(heartFinalLayout, false);
+    } else {
+      pendingHeartOutlineRefresh = true;
+    }
+  } else if (activeConstellation && activeConstellation.length){
     createConstellationLines(activeConstellation);
   }
 }
@@ -726,6 +747,7 @@ function buildConstellationLayout(width, height){
 }
 
 function createConstellationLines(layout){
+  if (heartFinaleStarted) return;
   if (!starsLayer || !layout || !layout.length) return;
   const existing = starsLayer.querySelector('.constellation-lines');
   if (existing) existing.remove();
@@ -755,11 +777,206 @@ function createConstellationLines(layout){
   starsLayer.insertBefore(svg, starsLayer.firstChild || null);
 }
 
+function generateHeartCurve(count){
+  const pts = [];
+  if (count <= 0) return pts;
+  const start = Math.PI;
+  const total = Math.PI * 2;
+  for (let i = 0; i < count; i++){
+    const t = start - (total * i) / count;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+    pts.push({ x, y });
+  }
+  return pts;
+}
+
+function buildHeartLayout(count, centerX, centerY, span){
+  if (count <= 0) return [];
+  const raw = generateHeartCurve(count);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  raw.forEach((pt) => {
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  });
+  const baseWidth = Math.max(1, maxX - minX);
+  const baseHeight = Math.max(1, maxY - minY);
+  const scale = span > 0 ? span / Math.max(baseWidth, baseHeight) : 1;
+  const baseCenterX = (minX + maxX) / 2;
+  const baseCenterY = (minY + maxY) / 2;
+  return raw.map((pt) => ({
+    x: centerX + (pt.x - baseCenterX) * scale,
+    y: centerY + (pt.y - baseCenterY) * scale,
+  }));
+}
+
+function computeHeartLayout(){
+  if (!allStars.length) return [];
+  const viewportWidth = window.innerWidth / spaceViewScale;
+  const viewportHeight = window.innerHeight / spaceViewScale;
+  const centerX = viewX + viewportWidth / 2;
+  const centerY = viewY + viewportHeight / 2 - Math.min(viewportHeight, viewportWidth) * 0.08;
+  const span = Math.min(viewportWidth, viewportHeight) * 0.72;
+  return buildHeartLayout(allStars.length, centerX, centerY, span);
+}
+
+function applyHeartPositions(layout, animate = false){
+  if (!layout.length) return;
+  const update = () => {
+    layout.forEach((pos, idx) => {
+      const star = allStars[idx];
+      if (!star) return;
+      const x = pos.x.toFixed(2);
+      const y = pos.y.toFixed(2);
+      star.dataset.heartX = x;
+      star.dataset.heartY = y;
+      star.style.setProperty('--x', `${x}px`);
+      star.style.setProperty('--y', `${y}px`);
+      star.style.left = `${x}px`;
+      star.style.top = `${y}px`;
+    });
+  };
+  if (animate){
+    layout.forEach((_, idx) => {
+      const star = allStars[idx];
+      if (!star) return;
+      star.classList.add('heart-star');
+      star.style.transitionDelay = `${(idx * HEART_MOVE_STAGGER).toFixed(2)}s`;
+      star.style.setProperty('--heart-tilt', `${rand(-10, 10).toFixed(2)}deg`);
+    });
+    requestAnimationFrame(update);
+  } else {
+    layout.forEach((_, idx) => {
+      const star = allStars[idx];
+      if (!star) return;
+      const prev = star.style.transition;
+      star.style.transition = 'none';
+      star.style.transitionDelay = '0s';
+      const x = layout[idx].x.toFixed(2);
+      const y = layout[idx].y.toFixed(2);
+      star.dataset.heartX = x;
+      star.dataset.heartY = y;
+      star.style.setProperty('--x', `${x}px`);
+      star.style.setProperty('--y', `${y}px`);
+      star.style.left = `${x}px`;
+      star.style.top = `${y}px`;
+      void star.offsetWidth;
+      star.style.transition = prev;
+    });
+  }
+}
+
+function removeConstellationLines(){
+  if (!starsLayer) return;
+  const lines = starsLayer.querySelectorAll('.constellation-lines');
+  lines.forEach((line) => line.remove());
+}
+
+function createHeartOutline(layout, animate = false){
+  if (!starsLayer || !layout.length) return;
+  if (heartLineTimer){
+    clearTimeout(heartLineTimer);
+    heartLineTimer = null;
+  }
+  if (heartLineSvg) heartLineSvg.remove();
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.classList.add('heart-outline');
+  const width = spaceWidth || window.innerWidth;
+  const height = spaceHeight || window.innerHeight;
+  svg.setAttribute('width', width.toFixed(2));
+  svg.setAttribute('height', height.toFixed(2));
+  svg.setAttribute('viewBox', `0 0 ${width.toFixed(2)} ${height.toFixed(2)}`);
+  const path = document.createElementNS(SVG_NS, 'path');
+  const commands = layout.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(' ');
+  path.setAttribute('d', `${commands} Z`);
+  svg.appendChild(path);
+  if (animate){
+    heartLineReady = false;
+    pendingHeartOutlineRefresh = false;
+    const length = path.getTotalLength();
+    const dash = length.toFixed(2);
+    path.style.strokeDasharray = dash;
+    path.style.strokeDashoffset = dash;
+    requestAnimationFrame(() => {
+      path.classList.add('draw');
+      path.style.strokeDashoffset = '0';
+      heartLineTimer = setTimeout(() => {
+        heartLineTimer = null;
+        heartLineReady = true;
+        if (pendingHeartOutlineRefresh && heartFinalLayout.length){
+          pendingHeartOutlineRefresh = false;
+          createHeartOutline(heartFinalLayout, false);
+        }
+      }, HEART_LINE_DRAW_DURATION * 1000);
+    });
+  } else {
+    path.classList.add('draw');
+    path.style.strokeDasharray = 'none';
+    path.style.strokeDashoffset = '0';
+    heartLineReady = true;
+    pendingHeartOutlineRefresh = false;
+  }
+  if (starsLayer.firstChild){
+    starsLayer.insertBefore(svg, starsLayer.firstChild);
+  } else {
+    starsLayer.appendChild(svg);
+  }
+  heartLineSvg = svg;
+}
+
+function startHeartFinale(){
+  if (heartFinaleStarted || !allStars.length) return;
+  pendingHeartFinale = false;
+  heartFinaleStarted = true;
+  heartLineReady = false;
+  pendingHeartOutlineRefresh = false;
+  if (heartLineTimer){
+    clearTimeout(heartLineTimer);
+    heartLineTimer = null;
+  }
+  removeConstellationLines();
+  starsLayer.classList.add('heart-mode');
+  starsLayer.style.pointerEvents = 'none';
+  if (hint){
+    hint.classList.remove('show');
+    hint.classList.add('hidden');
+  }
+  allStars.forEach((star) => {
+    star.classList.add('heart-star');
+    star.classList.add('visited');
+    star.style.pointerEvents = 'none';
+  });
+  heartFinalLayout = computeHeartLayout();
+  applyHeartPositions(heartFinalLayout, true);
+  const totalDelay = HEART_MOVE_DURATION + HEART_MOVE_STAGGER * Math.max(0, allStars.length - 1) + HEART_LINE_DELAY;
+  setTimeout(() => {
+    createHeartOutline(heartFinalLayout, true);
+  }, totalDelay * 1000);
+}
+
 // Кликабельные звезды
 function placeFeaturedStars(){
   if (!starsLayer) return;
   starsLayer.innerHTML = '';
   starsLayer.style.pointerEvents = 'none';
+  allStars = [];
+  visitedStars.clear();
+  pendingHeartFinale = false;
+  heartFinaleStarted = false;
+  heartFinalLayout = [];
+  heartLineReady = false;
+  pendingHeartOutlineRefresh = false;
+  if (heartLineTimer){
+    clearTimeout(heartLineTimer);
+    heartLineTimer = null;
+  }
+  if (heartLineSvg){
+    heartLineSvg.remove();
+    heartLineSvg = null;
+  }
+  starsLayer.classList.remove('heart-mode');
   const width = spaceWidth || window.innerWidth;
   const height = spaceHeight || window.innerHeight;
   const fullConstellation = buildConstellationLayout(width, height);
@@ -785,11 +1002,20 @@ function placeFeaturedStars(){
     star.style.setProperty('--x', `${x.toFixed(2)}px`);
     star.style.setProperty('--y', `${y.toFixed(2)}px`);
     star.style.setProperty('--tw', `${(tw || 3).toFixed(2)}s`);
+    star.style.left = `${x.toFixed(2)}px`;
+    star.style.top = `${y.toFixed(2)}px`;
     star.dataset.src = mem.src;
     star.dataset.caption = mem.caption;
+    star.dataset.originX = x.toFixed(2);
+    star.dataset.originY = y.toFixed(2);
 
     const open = (clientX, clientY) => {
       star.classList.add('visited');
+      const wasVisited = visitedStars.has(star);
+      visitedStars.add(star);
+      if (!wasVisited && visitedStars.size === allStars.length && allStars.length > 0 && !heartFinaleStarted){
+        pendingHeartFinale = true;
+      }
       const rect = star.getBoundingClientRect();
       const hasCoords = Number.isFinite(clientX) && Number.isFinite(clientY);
       const sparkleX = hasCoords ? clientX : rect.left + rect.width / 2;
@@ -804,6 +1030,7 @@ function placeFeaturedStars(){
     });
 
     starsLayer.appendChild(star);
+    allStars.push(star);
     return star;
   };
 
@@ -850,7 +1077,16 @@ function openMemory(src, caption){
   captionEl.textContent = caption || '';
   memoryEl.classList.remove('hidden');
 }
-function closeMemory(){ memoryEl.classList.add('hidden'); }
+function closeMemory(){
+  memoryEl.classList.add('hidden');
+  if (pendingHeartFinale && !heartFinaleStarted){
+    setTimeout(() => {
+      if (pendingHeartFinale && !heartFinaleStarted){
+        startHeartFinale();
+      }
+    }, 320);
+  }
+}
 closeBtn.addEventListener('click', closeMemory);
 memoryEl.addEventListener('click', e => { if (e.target === memoryEl) closeMemory(); });
 
