@@ -593,6 +593,54 @@ function handleSpaceWheel(e){
     markInteractionComplete();
   }
 }
+
+function handlePanPointerDown(e){
+  if (!spaceWrapper) return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  panPointerId = e.pointerId;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  originViewX = viewX;
+  originViewY = viewY;
+  panMovedDuringGesture = false;
+}
+
+function handlePanPointerMove(e){
+  if (panPointerId === null || e.pointerId !== panPointerId) return;
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  if (!panMovedDuringGesture && Math.hypot(dx, dy) > 6){
+    panMovedDuringGesture = true;
+    if (spaceWrapper){
+      spaceWrapper.classList.add('panning');
+      if (typeof spaceWrapper.setPointerCapture === 'function'){
+        spaceWrapper.setPointerCapture(panPointerId);
+      }
+    }
+  }
+  if (!panMovedDuringGesture) return;
+  viewX = originViewX - dx;
+  viewY = originViewY - dy;
+  updateSpaceTransform();
+}
+
+function handlePanPointerUp(e){
+  if (panPointerId === null || (e && e.pointerId !== panPointerId)) return;
+  if (spaceWrapper){
+    spaceWrapper.classList.remove('panning');
+    if (typeof spaceWrapper.releasePointerCapture === 'function'){
+      if (!spaceWrapper.hasPointerCapture || spaceWrapper.hasPointerCapture(panPointerId)){
+        spaceWrapper.releasePointerCapture(panPointerId);
+      }
+    }
+  }
+  if (panMovedDuringGesture){
+    panJustHappened = true;
+    requestAnimationFrame(() => { panJustHappened = false; });
+  }
+  panPointerId = null;
+  panMovedDuringGesture = false;
+}
 function genStarfield(){
   const layers = [
     { count: Math.floor((W*H)/70000), size:[0.7,1.2], alpha:[0.3,0.6], speed:0.02 },
