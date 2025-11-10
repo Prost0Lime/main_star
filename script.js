@@ -35,14 +35,14 @@ const hint = document.getElementById('hint');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
 // === ЭТАПЫ ИНТРО ===
-// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
+// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды
 const INTRO = {
-  SUNSET_DURATION: 4.8,
+  SUNSET_DURATION: 5,
   BLUE_HOUR: 1.8,
-  NIGHT_FALL: 2.4,
+  NIGHT_FALL: 0.5,
   STARS_DELAY: 0,
-  STARS_FADE: 2.1,
-  HOLD: 0.45,
+  STARS_FADE: 0,
+  HOLD: 2,
 };
 
 const CAMERA = {
@@ -248,7 +248,7 @@ function genStarfield(){
 }
 let t0 = performance.now();
 function renderBackground(t){
-  const dt = (t - t0)/1000; t0 = t;
+  const dt = (t - t0)/100; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
   const g = bgCtx.createLinearGradient(0, 0, 0, H);
