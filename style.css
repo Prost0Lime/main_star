@@ -10,8 +10,11 @@ body{margin:0;background:#050b16;color:#fff;font-family:-apple-system,BlinkMacSy
 #intro #sunGroup{transform-origin:195px 560px} /* pivot для анимации солнца */
 
 /* Пост-интро слои */
+#space-wrapper{position:absolute;inset:0;overflow:hidden;z-index:1;touch-action:none;cursor:grab}
+#space-wrapper.panning{cursor:grabbing}
+#space{position:absolute;top:0;left:0;will-change:transform;transform-origin:0 0}
 #bg,#fx{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
-#stars-layer{position:absolute;inset:0;pointer-events:none;z-index:2}
+#stars-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .star{position:absolute;width:var(--size,12px);height:var(--size,12px);left:var(--x,50%);top:var(--y,50%);transform:translate(-50%,-50%);pointer-events:auto;border-radius:50%;background:
   radial-gradient(circle at 50% 50%,#fff 0%,rgba(255,255,255,.92) 35%,rgba(255,255,255,.3) 55%,rgba(140,170,255,0) 75%),
   radial-gradient(circle at 50% 50%,rgba(100,140,255,.28) 0%,rgba(100,140,255,0) 70%);
@@ -21,6 +24,15 @@ animation:twinkle var(--tw,2.8s) ease-in-out infinite;cursor:pointer;border:none
 .star::before,.star::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.8),rgba(255,255,255,0));border-radius:999px;opacity:.85;filter:blur(.2px)}
 .star::before{width:190%;height:28%}
 .star::after{width:28%;height:190%;background:linear-gradient(0deg,rgba(255,255,255,0),rgba(255,255,255,.8),rgba(255,255,255,0))}
+.star.visited{background:
+  radial-gradient(circle at 50% 50%,#ffe3f4 0%,#ff9fce 48%,rgba(255,116,188,0.38) 72%,rgba(255,116,188,0) 100%);
+box-shadow:0 0 16px rgba(255,126,191,.8),0 0 34px rgba(255,114,185,.45)}
+.star.visited::before{background:linear-gradient(90deg,rgba(255,158,205,0),rgba(255,158,205,.95),rgba(255,158,205,0))}
+.star.visited::after{background:linear-gradient(0deg,rgba(255,158,205,0),rgba(255,158,205,.95),rgba(255,158,205,0))}
+.constellation-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.constellation-lines line{stroke:rgba(210,220,255,.85);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:8 18;filter:drop-shadow(0 0 6px rgba(180,200,255,.6));animation:constellationFlow var(--flow-duration,5s) linear infinite,constellationPulse var(--pulse-duration,3.6s) ease-in-out infinite}
+@keyframes constellationFlow{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-26}}
+@keyframes constellationPulse{0%,100%{opacity:.55}50%{opacity:.92}}
 @keyframes twinkle{0%,100%{opacity:.65;scale:.96}50%{opacity:1;scale:1.18}}
 
 /* Модалка */
