@@ -39,9 +39,9 @@ const dpr = Math.min(2, window.devicePixelRatio || 1);
 const INTRO = {
   SUNSET_DURATION: 4.8,
   BLUE_HOUR: 1.8,
-  NIGHT_FALL: 2.4,
+  NIGHT_FALL: 0,
   STARS_DELAY: 0,
-  STARS_FADE: 2.1,
+  STARS_FADE: 0,
   HOLD: 0.45,
 };
 
