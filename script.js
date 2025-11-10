@@ -808,7 +808,7 @@ function buildHeartLayout(count, centerX, centerY, span){
   const baseCenterY = (minY + maxY) / 2;
   return raw.map((pt) => ({
     x: centerX + (pt.x - baseCenterX) * scale,
-    y: centerY + (pt.y - baseCenterY) * scale,
+    y: centerY - (pt.y - baseCenterY) * scale,
   }));
 }
 
@@ -1009,7 +1009,7 @@ function placeFeaturedStars(){
     star.dataset.originX = x.toFixed(2);
     star.dataset.originY = y.toFixed(2);
 
-    const open = (clientX, clientY) => {
+    const open = () => {
       star.classList.add('visited');
       const wasVisited = visitedStars.has(star);
       visitedStars.add(star);
@@ -1017,16 +1017,14 @@ function placeFeaturedStars(){
         pendingHeartFinale = true;
       }
       const rect = star.getBoundingClientRect();
-      const hasCoords = Number.isFinite(clientX) && Number.isFinite(clientY);
-      const sparkleX = hasCoords ? clientX : rect.left + rect.width / 2;
-      const sparkleY = hasCoords ? clientY : rect.top + rect.height / 2;
+      const sparkleX = rect.left + rect.width / 2;
+      const sparkleY = rect.top + rect.height / 2;
       openMemory(mem.src, mem.caption);
       sparkle(sparkleX, sparkleY);
     };
-    star.addEventListener('click', (e) => {
+    star.addEventListener('click', () => {
       if (panJustHappened) return;
-      const isKeyboard = e.detail === 0;
-      open(isKeyboard ? undefined : e.clientX, isKeyboard ? undefined : e.clientY);
+      open();
     });
 
     starsLayer.appendChild(star);
