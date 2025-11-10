@@ -25,6 +25,8 @@ const introStarsGroup = document.getElementById('introStars');
 const introStarDots = introStarsGroup ? Array.from(introStarsGroup.querySelectorAll('circle')) : [];
 const introText = document.getElementById('introText');
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 const bg = document.getElementById('bg');
 const starsLayer = document.getElementById('stars-layer');
 const fx = document.getElementById('fx');
@@ -46,8 +48,8 @@ const INTRO = {
 const CAMERA = {
   START_OFFSET: 0.62,
   DURATION: 3.4,
-  LIFT: 260,
-  SCALE: 1.1,
+  LIFT: 360,
+  SCALE: 1.12,
 };
 
 INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
@@ -65,6 +67,35 @@ function easeInOutCubic(x){
 }
 function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
 function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
+
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function initClouds(){
+  if (!clouds) return;
+  while (clouds.firstChild) clouds.removeChild(clouds.firstChild);
+  const clusterCount = Math.floor(rand(3, 6));
+  for (let i = 0; i < clusterCount; i++) {
+    const group = document.createElementNS(SVG_NS, 'g');
+    const baseX = rand(-40, 260);
+    const baseY = rand(230, 320);
+    const scale = rand(0.55, 0.9);
+    group.setAttribute('transform', `translate(${baseX.toFixed(1)} ${baseY.toFixed(1)}) scale(${scale.toFixed(3)})`);
+    const partCount = Math.floor(rand(3, 6));
+    for (let p = 0; p < partCount; p++) {
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', rand(-42, 46).toFixed(1));
+      circle.setAttribute('cy', rand(-18, 18).toFixed(1));
+      circle.setAttribute('r', rand(16, 34).toFixed(1));
+      const opacity = (0.68 + Math.random() * 0.24).toFixed(2);
+      circle.setAttribute('fill', '#f6f8ff');
+      circle.setAttribute('fill-opacity', opacity);
+      group.appendChild(circle);
+    }
+    clouds.appendChild(group);
+  }
+}
 
 const SKY = {
   top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
@@ -125,7 +156,7 @@ function animateIntro(ts){
   if (scene) {
     const lift = lerp(0, CAMERA.LIFT, cameraProgress);
     const scale = lerp(1, CAMERA.SCALE, cameraProgress);
-    scene.setAttribute('transform', `translate(0 ${(-lift).toFixed(2)}) scale(${scale.toFixed(3)})`);
+    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
   }
   const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
   intro.style.opacity = (1 - fadeBlend).toFixed(3);
@@ -353,6 +384,7 @@ function initBackground(){
 }
 
 // Старт анимации интро
+initClouds();
 requestAnimationFrame(animateIntro);
 
 // Предзагрузка изображений
