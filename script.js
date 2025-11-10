@@ -58,6 +58,10 @@ const audioToggle = document.getElementById('audioToggle');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
 const SPACE_MULTIPLIER = 3.2;
+const INITIAL_SPACE_SCALE = 0.82;
+const MIN_SPACE_SCALE = 0.62;
+const MAX_SPACE_SCALE = 1.38;
+let spaceViewScale = INITIAL_SPACE_SCALE;
 let spaceWidth = window.innerWidth;
 let spaceHeight = window.innerHeight;
 let viewX = 0;
@@ -72,6 +76,42 @@ let originViewX = 0;
 let originViewY = 0;
 let panMovedDuringGesture = false;
 let panJustHappened = false;
+let activeConstellation = [];
+let pinchActive = false;
+let pinchBase = null;
+const activePointers = new Map();
+
+const CONSTELLATION_TEMPLATE = [
+  { id: 1, x: 64, y: 312, size: 11.5, tw: 3.4 },
+  { id: 2, x: 52, y: 96, size: 12.5, tw: 3.2 },
+  { id: 3, x: 520, y: 190, size: 12.8, tw: 3.1 },
+  { id: 4, x: 568, y: 84, size: 14.6, tw: 3.8 },
+  { id: 5, x: 164, y: 136, size: 11.8, tw: 3.6 },
+  { id: 6, x: 188, y: 284, size: 12.2, tw: 3.5 },
+  { id: 7, x: 296, y: 126, size: 12.4, tw: 3.3 },
+  { id: 8, x: 472, y: 324, size: 13.4, tw: 3.7 },
+  { id: 9, x: 356, y: 256, size: 12.9, tw: 3.2 },
+  { id: 10, x: 556, y: 118, size: 11.2, tw: 3.9 },
+  { id: 11, x: 224, y: 164, size: 11.4, tw: 3.4 },
+  { id: 12, x: 420, y: 110, size: 12.1, tw: 3.1 },
+];
+
+const CONSTELLATION_EDGES = [
+  [1, 6],
+  [6, 9],
+  [9, 8],
+  [8, 3],
+  [3, 4],
+  [4, 10],
+  [10, 12],
+  [12, 7],
+  [7, 11],
+  [11, 5],
+  [5, 2],
+  [6, 5],
+  [7, 9],
+  [3, 12],
+];
 
 // === ЭТАПЫ ИНТРО ===
 // Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
@@ -289,7 +329,45 @@ function updateSpaceTransform(){
   if (!space) return;
   viewX = clamp(viewX, 0, maxViewX);
   viewY = clamp(viewY, 0, maxViewY);
-  space.style.transform = `translate(${-viewX}px, ${-viewY}px)`;
+  const scale = spaceViewScale;
+  const tx = -viewX / scale;
+  const ty = -viewY / scale;
+  space.style.transform = `scale(${scale}) translate(${tx}px, ${ty}px)`;
+}
+
+function updateViewBounds(vw = window.innerWidth, vh = window.innerHeight){
+  const scaledViewWidth = vw / spaceViewScale;
+  const scaledViewHeight = vh / spaceViewScale;
+  maxViewX = Math.max(0, spaceWidth - scaledViewWidth);
+  maxViewY = Math.max(0, spaceHeight - scaledViewHeight);
+}
+
+function markInteractionComplete(){
+  panJustHappened = true;
+  requestAnimationFrame(() => { panJustHappened = false; });
+}
+
+function setPanningActive(active){
+  if (!spaceWrapper) return;
+  if (active){
+    spaceWrapper.classList.add('panning');
+  } else {
+    spaceWrapper.classList.remove('panning');
+  }
+}
+
+function applyScale(targetScale, anchorX = window.innerWidth / 2, anchorY = window.innerHeight / 2){
+  const prevScale = spaceViewScale;
+  const nextScale = clamp(targetScale, MIN_SPACE_SCALE, MAX_SPACE_SCALE);
+  if (Math.abs(nextScale - prevScale) < 1e-4) return false;
+  const worldX = viewX + anchorX / prevScale;
+  const worldY = viewY + anchorY / prevScale;
+  spaceViewScale = nextScale;
+  updateViewBounds();
+  viewX = worldX - anchorX / spaceViewScale;
+  viewY = worldY - anchorY / spaceViewScale;
+  updateSpaceTransform();
+  return true;
 }
 
 function resize(){
@@ -313,8 +391,7 @@ function resize(){
     spaceHeight = Math.max(vh, prevHeight);
   }
 
-  maxViewX = Math.max(0, spaceWidth - vw);
-  maxViewY = Math.max(0, spaceHeight - vh);
+  updateViewBounds(vw, vh);
 
   if (!viewInitialized){
     viewX = maxViewX / 2;
@@ -347,6 +424,174 @@ function resize(){
 
   updateSpaceTransform();
   genStarfield();
+  if (activeConstellation && activeConstellation.length){
+    createConstellationLines(activeConstellation);
+  }
+}
+
+function startPinch(){
+  if (activePointers.size < 2) return;
+  const iterator = activePointers.values();
+  const first = iterator.next().value;
+  const second = iterator.next().value;
+  if (!first || !second) return;
+  const distance = Math.hypot(first.x - second.x, first.y - second.y);
+  if (distance <= 0) return;
+  const centerX = (first.x + second.x) / 2;
+  const centerY = (first.y + second.y) / 2;
+  pinchActive = true;
+  pinchBase = {
+    distance,
+    scale: spaceViewScale,
+    centerX,
+    centerY,
+    worldCenterX: viewX + centerX / spaceViewScale,
+    worldCenterY: viewY + centerY / spaceViewScale,
+  };
+  panPointerId = null;
+  panMovedDuringGesture = true;
+  setPanningActive(true);
+  if (spaceWrapper && typeof spaceWrapper.setPointerCapture === 'function'){
+    for (const id of activePointers.keys()){
+      try { spaceWrapper.setPointerCapture(id); } catch (_) {}
+    }
+  }
+}
+
+function handleSpacePointerDown(e){
+  if (!spaceWrapper) return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  if (!viewInitialized) return;
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 1){
+    panPointerId = e.pointerId;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    originViewX = viewX;
+    originViewY = viewY;
+    panMovedDuringGesture = false;
+  } else if (activePointers.size === 2){
+    startPinch();
+  }
+}
+
+function handleSpacePointerMove(e){
+  if (!activePointers.has(e.pointerId)) return;
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pinchActive && pinchBase){
+    const iterator = activePointers.values();
+    const first = iterator.next().value;
+    const second = iterator.next().value;
+    if (first && second){
+      const distance = Math.hypot(first.x - second.x, first.y - second.y);
+      if (distance > 0){
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const rawScale = pinchBase.scale * (distance / pinchBase.distance);
+        spaceViewScale = clamp(rawScale, MIN_SPACE_SCALE, MAX_SPACE_SCALE);
+        updateViewBounds();
+        viewX = pinchBase.worldCenterX - centerX / spaceViewScale;
+        viewY = pinchBase.worldCenterY - centerY / spaceViewScale;
+        updateSpaceTransform();
+      }
+    }
+    return;
+  }
+
+  if (panPointerId !== e.pointerId) return;
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  if (!panMovedDuringGesture && Math.hypot(dx, dy) > 6){
+    panMovedDuringGesture = true;
+    setPanningActive(true);
+    if (spaceWrapper && typeof spaceWrapper.setPointerCapture === 'function'){
+      try { spaceWrapper.setPointerCapture(panPointerId); } catch (_) {}
+    }
+  }
+  if (!panMovedDuringGesture) return;
+  const invScale = 1 / spaceViewScale;
+  viewX = originViewX - dx * invScale;
+  viewY = originViewY - dy * invScale;
+  updateSpaceTransform();
+}
+
+function finishPanGesture(pointerId){
+  if (spaceWrapper){
+    if (!pinchActive){
+      setPanningActive(false);
+    }
+    if (typeof spaceWrapper.releasePointerCapture === 'function'){
+      try { spaceWrapper.releasePointerCapture(pointerId); } catch (_) {}
+    }
+  }
+  if (panMovedDuringGesture){
+    markInteractionComplete();
+  }
+  panPointerId = null;
+  panMovedDuringGesture = false;
+}
+
+function handleSpacePointerUp(e){
+  if (!activePointers.has(e.pointerId)) return;
+
+  if (pinchActive){
+    if (spaceWrapper && typeof spaceWrapper.releasePointerCapture === 'function'){
+      try { spaceWrapper.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  }
+
+  activePointers.delete(e.pointerId);
+
+  if (pinchActive){
+    if (activePointers.size >= 2){
+      startPinch();
+      return;
+    }
+    if (activePointers.size < 2){
+      if (panMovedDuringGesture){
+        markInteractionComplete();
+      }
+      pinchActive = false;
+      pinchBase = null;
+      if (activePointers.size === 1){
+        const [id, pos] = activePointers.entries().next().value;
+        panPointerId = id;
+        panStartX = pos.x;
+        panStartY = pos.y;
+        originViewX = viewX;
+        originViewY = viewY;
+        panMovedDuringGesture = false;
+      } else {
+        panPointerId = null;
+        panMovedDuringGesture = false;
+        setPanningActive(false);
+      }
+    }
+    return;
+  }
+
+  if (panPointerId === e.pointerId){
+    finishPanGesture(e.pointerId);
+  } else {
+    if (!pinchActive && activePointers.size === 0){
+      setPanningActive(false);
+    }
+  }
+}
+
+function handleSpaceWheel(e){
+  if (!spaceWrapper) return;
+  if (!viewInitialized) return;
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  const delta = e.deltaY;
+  if (!Number.isFinite(delta)) return;
+  const factor = Math.exp(-delta * 0.002);
+  const changed = applyScale(spaceViewScale * factor, e.clientX, e.clientY);
+  if (changed){
+    markInteractionComplete();
+  }
 }
 
 function handlePanPointerDown(e){
@@ -445,47 +690,105 @@ function renderBackground(t){
   requestAnimationFrame(renderBackground);
 }
 
+function buildConstellationLayout(width, height){
+  if (!CONSTELLATION_TEMPLATE.length) return [];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const pt of CONSTELLATION_TEMPLATE){
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return [];
+  const baseWidth = Math.max(1, maxX - minX);
+  const baseHeight = Math.max(1, maxY - minY);
+  const baseCenterX = (minX + maxX) / 2;
+  const baseCenterY = (minY + maxY) / 2;
+  const targetSpan = Math.min(width, height) * 0.68;
+  const span = Math.max(baseWidth, baseHeight);
+  const scale = span > 0 ? targetSpan / span : 1;
+  const sizeScale = clamp(scale * 0.92, 0.7, 1.45);
+  const margin = Math.min(width, height) * 0.08;
+  const cx = width / 2;
+  const cy = height / 2;
+  return CONSTELLATION_TEMPLATE.map((pt) => {
+    const px = clamp(cx + (pt.x - baseCenterX) * scale, margin, width - margin);
+    const py = clamp(cy + (pt.y - baseCenterY) * scale, margin, height - margin);
+    const twVariation = (Math.random() - 0.5) * 0.6;
+    return {
+      id: pt.id,
+      x: px,
+      y: py,
+      size: Math.max(8, (pt.size || 12) * sizeScale),
+      tw: Math.max(2.4, (pt.tw || 3.2) + twVariation),
+    };
+  });
+}
+
+function createConstellationLines(layout){
+  if (!starsLayer || !layout || !layout.length) return;
+  const existing = starsLayer.querySelector('.constellation-lines');
+  if (existing) existing.remove();
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.classList.add('constellation-lines');
+  const width = spaceWidth || window.innerWidth;
+  const height = spaceHeight || window.innerHeight;
+  svg.setAttribute('width', width.toFixed(2));
+  svg.setAttribute('height', height.toFixed(2));
+  svg.setAttribute('viewBox', `0 0 ${width.toFixed(2)} ${height.toFixed(2)}`);
+  const map = new Map(layout.map((pt) => [pt.id, pt]));
+  CONSTELLATION_EDGES.forEach((edge) => {
+    const [aId, bId] = edge;
+    const a = map.get(aId);
+    const b = map.get(bId);
+    if (!a || !b) return;
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', a.x.toFixed(2));
+    line.setAttribute('y1', a.y.toFixed(2));
+    line.setAttribute('x2', b.x.toFixed(2));
+    line.setAttribute('y2', b.y.toFixed(2));
+    line.style.setProperty('--flow-duration', `${(4.2 + Math.random() * 2.4).toFixed(2)}s`);
+    line.style.setProperty('--pulse-duration', `${(3 + Math.random() * 2.4).toFixed(2)}s`);
+    line.style.animationDelay = `${(-Math.random() * 3).toFixed(2)}s`;
+    svg.appendChild(line);
+  });
+  starsLayer.insertBefore(svg, starsLayer.firstChild || null);
+}
+
 // Кликабельные звезды
 function placeFeaturedStars(){
   if (!starsLayer) return;
   starsLayer.innerHTML = '';
   starsLayer.style.pointerEvents = 'none';
-  const used = [];
-  const count = FEATURED_COUNT;
   const width = spaceWidth || window.innerWidth;
   const height = spaceHeight || window.innerHeight;
-  const marginX = Math.min(240, width * 0.18);
-  const marginY = Math.min(240, height * 0.18);
+  const fullConstellation = buildConstellationLayout(width, height);
+  const count = FEATURED_COUNT;
+  const constellationLayout = fullConstellation.slice(0, Math.min(count, fullConstellation.length));
+  activeConstellation = constellationLayout.map((pt) => ({ ...pt }));
+  const used = constellationLayout.map((pt) => ({ x: pt.x, y: pt.y }));
+  const marginX = Math.min(240, width * 0.16);
+  const marginY = Math.min(240, height * 0.16);
+  const minDist = Math.min(200, Math.max(130, Math.min(width, height) * 0.18));
+  let memoryIndex = 0;
 
-  for(let i=0;i<count;i++){
+  const nextMemory = () => {
+    const mem = MEMORIES[memoryIndex % MEMORIES.length];
+    memoryIndex += 1;
+    return mem;
+  };
+
+  const createStar = ({ x, y, size, tw, extraClass }, mem) => {
     const star = document.createElement('button');
-    star.className = 'star';
-    const size = 10 + Math.random()*10;
-    let x = 0;
-    let y = 0;
-    let attempts = 0;
-    const maxAttempts = 80;
-    while (attempts < maxAttempts){
-      x = rand(marginX, width - marginX);
-      y = rand(marginY, height - marginY);
-      let ok = true;
-      for (const p of used) {
-        if (Math.hypot(p.x - x, p.y - y) < 140) { ok = false; break; }
-      }
-      if (ok) break;
-      attempts++;
-    }
-    used.push({x,y});
-    star.style.setProperty('--size', `${size}px`);
-    star.style.setProperty('--x', `${x}px`);
-    star.style.setProperty('--y', `${y}px`);
-    star.style.setProperty('--tw', `${2 + Math.random()*1.8}s`);
-
-    const mem = MEMORIES[i % MEMORIES.length];
+    star.className = extraClass ? `star ${extraClass}` : 'star';
+    star.style.setProperty('--size', `${size.toFixed(2)}px`);
+    star.style.setProperty('--x', `${x.toFixed(2)}px`);
+    star.style.setProperty('--y', `${y.toFixed(2)}px`);
+    star.style.setProperty('--tw', `${(tw || 3).toFixed(2)}s`);
     star.dataset.src = mem.src;
     star.dataset.caption = mem.caption;
 
-    const open = (clientX, clientY)=>{
+    const open = (clientX, clientY) => {
       star.classList.add('visited');
       const rect = star.getBoundingClientRect();
       const hasCoords = Number.isFinite(clientX) && Number.isFinite(clientY);
@@ -494,14 +797,46 @@ function placeFeaturedStars(){
       openMemory(mem.src, mem.caption);
       sparkle(sparkleX, sparkleY);
     };
-    star.addEventListener('click', e => {
+    star.addEventListener('click', (e) => {
       if (panJustHappened) return;
       const isKeyboard = e.detail === 0;
       open(isKeyboard ? undefined : e.clientX, isKeyboard ? undefined : e.clientY);
     });
 
     starsLayer.appendChild(star);
+    return star;
+  };
+
+  for (const node of constellationLayout){
+    createStar({ ...node, extraClass: 'constellation-star' }, nextMemory());
   }
+
+  let created = constellationLayout.length;
+  const maxAttempts = 140;
+  while (created < count){
+    let x = 0;
+    let y = 0;
+    let attempts = 0;
+    while (attempts < maxAttempts){
+      x = rand(marginX, width - marginX);
+      y = rand(marginY, height - marginY);
+      let ok = true;
+      for (const p of used){
+        if (Math.hypot(p.x - x, p.y - y) < minDist){
+          ok = false;
+          break;
+        }
+      }
+      if (ok) break;
+      attempts++;
+    }
+    used.push({ x, y });
+    const mem = nextMemory();
+    createStar({ x, y, size: 10 + Math.random() * 10, tw: 2 + Math.random() * 1.8 }, mem);
+    created++;
+  }
+
+  createConstellationLines(activeConstellation);
   starsLayer.style.pointerEvents = 'auto';
 }
 
@@ -684,10 +1019,11 @@ document.addEventListener('keydown', (event) => {
 }, { once: true });
 
 if (spaceWrapper){
-  spaceWrapper.addEventListener('pointerdown', handlePanPointerDown);
-  spaceWrapper.addEventListener('pointermove', handlePanPointerMove);
-  spaceWrapper.addEventListener('pointerup', handlePanPointerUp);
-  spaceWrapper.addEventListener('pointercancel', handlePanPointerUp);
+  spaceWrapper.addEventListener('pointerdown', handleSpacePointerDown);
+  spaceWrapper.addEventListener('pointermove', handleSpacePointerMove);
+  spaceWrapper.addEventListener('pointerup', handleSpacePointerUp);
+  spaceWrapper.addEventListener('pointercancel', handleSpacePointerUp);
+  spaceWrapper.addEventListener('wheel', handleSpaceWheel, { passive: false });
 }
 
 // Инициализация после завершения интро
