@@ -57,9 +57,14 @@ const HINT_DEFAULT_TEXT = hint ? hint.textContent : '';
 const HINT_HEART_MESSAGE = 'С любовью ...';
 const audioToggle = document.getElementById('audioToggle');
 
-const dpr = Math.min(2, window.devicePixelRatio || 1);
+const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
+const smallViewport = Math.max(window.innerWidth, window.innerHeight) <= 900;
+const lowPowerMode = coarsePointer || smallViewport;
 
-const SPACE_MULTIPLIER = 3.2;
+const MAX_DPR = lowPowerMode ? 1.3 : 2;
+let dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+
+const SPACE_MULTIPLIER = lowPowerMode ? 2.4 : 3.2;
 const INITIAL_SPACE_SCALE = 0.82;
 const MIN_SPACE_SCALE = 0.62;
 const MAX_SPACE_SCALE = 1.38;
@@ -385,8 +390,13 @@ function applyScale(targetScale, anchorX = window.innerWidth / 2, anchorY = wind
   return true;
 }
 
+function updateDpr(){
+  dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+}
+
 function resize(){
-  const scale = Math.min(2, window.devicePixelRatio||1);
+  updateDpr();
+  const scale = dpr;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const prevMaxX = maxViewX;
@@ -665,10 +675,13 @@ function handlePanPointerUp(e){
   panMovedDuringGesture = false;
 }
 function genStarfield(){
+  const densityScale = lowPowerMode ? 0.55 : 1;
+  const speedScale = lowPowerMode ? 0.75 : 1;
+  const twinkleScale = lowPowerMode ? 0.8 : 1;
   const layers = [
-    { count: Math.floor((W*H)/70000), size:[0.7,1.2], alpha:[0.3,0.6], speed:0.02 },
-    { count: Math.floor((W*H)/120000), size:[1.2,1.8], alpha:[0.5,0.8], speed:0.04 },
-    { count: Math.floor((W*H)/180000), size:[1.8,2.4], alpha:[0.7,1.0], speed:0.07 },
+    { count: Math.max(12, Math.floor(densityScale * (W*H)/70000)), size:[0.7,1.2], alpha:[0.3,0.6], speed:0.02 * speedScale },
+    { count: Math.max(8, Math.floor(densityScale * (W*H)/120000)), size:[1.2,1.8], alpha:[0.5,0.8], speed:0.04 * speedScale },
+    { count: Math.max(6, Math.floor(densityScale * (W*H)/180000)), size:[1.8,2.4], alpha:[0.7,1.0], speed:0.07 * speedScale },
   ];
   starfield = [];
   for(const L of layers){
@@ -679,16 +692,23 @@ function genStarfield(){
         r: (L.size[0] + Math.random()*(L.size[1]-L.size[0])),
         a: L.alpha[0] + Math.random()*(L.alpha[1]-L.alpha[0]),
         s: L.speed * (0.5 + Math.random()),
-        tw: 0.5 + Math.random()*0.5,
+        tw: (0.5 + Math.random()*0.5) * twinkleScale,
         phase: Math.random()*Math.PI*2
       });
     }
   }
 }
-let t0 = performance.now();
+const MIN_BG_FRAME_MS = lowPowerMode ? (1000 / 30) : 0;
+let lastBgTick = performance.now();
 function renderBackground(t){
   if (!bgCtx) return;
-  const dt = (t - t0)/1000; t0 = t;
+  const elapsedMs = t - lastBgTick;
+  if (MIN_BG_FRAME_MS && elapsedMs < MIN_BG_FRAME_MS){
+    requestAnimationFrame(renderBackground);
+    return;
+  }
+  const dt = Math.min(0.05, Math.max(0.016, elapsedMs / 1000));
+  lastBgTick = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
   const g = bgCtx.createLinearGradient(0, 0, 0, H);
@@ -1101,14 +1121,18 @@ memoryEl.addEventListener('click', e => { if (e.target === memoryEl) closeMemory
 // Блёстки
 const fxCtx = fx ? fx.getContext('2d') : null;
 let particles = [];
+const SPARKLE_PARTICLE_COUNT = lowPowerMode ? 16 : 28;
+const SPARKLE_MIN_SPEED = lowPowerMode ? 60 : 80;
+const SPARKLE_MAX_SPEED = lowPowerMode ? 160 : 220;
+
 function sparkle(x,y){
   if (!fx || !fxCtx) return;
   const rect = fx.getBoundingClientRect();
   const px = (x - rect.left) * dpr;
   const py = (y - rect.top) * dpr;
-  for (let i=0;i<28;i++){
+  for (let i=0;i<SPARKLE_PARTICLE_COUNT;i++){
     const a = Math.random()*Math.PI*2;
-    const sp = 80 + Math.random()*220;
+    const sp = SPARKLE_MIN_SPEED + Math.random()*(SPARKLE_MAX_SPEED - SPARKLE_MIN_SPEED);
     particles.push({
       x:px,y:py, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
       life:0, ttl:0.6 + Math.random()*0.5, size:1 + Math.random()*2,
@@ -1116,10 +1140,16 @@ function sparkle(x,y){
     });
   }
 }
+const MIN_FX_FRAME_MS = lowPowerMode ? (1000 / 45) : 0;
 let lastFx = performance.now();
 function renderFx(t){
   if (!fxCtx) return;
-  const dt = Math.min(0.033, (t - lastFx)/1000);
+  const elapsedMs = t - lastFx;
+  if (MIN_FX_FRAME_MS && elapsedMs < MIN_FX_FRAME_MS){
+    requestAnimationFrame(renderFx);
+    return;
+  }
+  const dt = Math.min(0.05, Math.max(0.016, elapsedMs/1000));
   lastFx = t;
   fxCtx.clearRect(0,0,fx.width,fx.height);
   particles = particles.filter(p => p.life < p.ttl);
