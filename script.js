@@ -31,6 +31,7 @@ const bg = document.getElementById('bg');
 const starsLayer = document.getElementById('stars-layer');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
+const audioToggle = document.getElementById('audioToggle');
 
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
@@ -393,6 +394,131 @@ function renderFx(t){
   }
   requestAnimationFrame(renderFx);
 }
+
+// === Аудио-эмбиент ===
+const ambient = {
+  audio: null,
+  active: false,
+  fadeHandle: null,
+};
+
+function ensureAmbient(){
+  if (ambient.audio) return ambient;
+
+  const probe = document.createElement('audio');
+  if (!probe || typeof probe.canPlayType !== 'function' || probe.canPlayType('audio/mpeg') === '') {
+    return null;
+  }
+
+  const audio = new Audio();
+  audio.src = 'assets/ambient.mp3'; // замените файлом с атмосферой
+  audio.loop = true;
+  audio.preload = 'auto';
+  audio.volume = 0;
+  audio.setAttribute('aria-hidden', 'true');
+  audio.style.display = 'none';
+  audio.addEventListener('error', () => {
+    if (audioToggle) audioToggle.style.display = 'none';
+  }, { once: true });
+  document.body.appendChild(audio);
+
+  ambient.audio = audio;
+  return ambient;
+}
+
+function fadeAudioTo(audio, target, duration, done){
+  if (!audio) return;
+  if (ambient.fadeHandle) {
+    cancelAnimationFrame(ambient.fadeHandle);
+    ambient.fadeHandle = null;
+  }
+  const startVolume = audio.volume;
+  const clampedTarget = clamp(target, 0, 1);
+  if (duration <= 0) {
+    audio.volume = clampedTarget;
+    if (done) done();
+    return;
+  }
+  const startTime = performance.now();
+  function step(now){
+    const progress = clamp((now - startTime) / (duration * 1000), 0, 1);
+    const value = startVolume + (clampedTarget - startVolume) * progress;
+    audio.volume = clamp(value, 0, 1);
+    if (progress < 1) {
+      ambient.fadeHandle = requestAnimationFrame(step);
+    } else {
+      ambient.fadeHandle = null;
+      if (done) done();
+    }
+  }
+  ambient.fadeHandle = requestAnimationFrame(step);
+}
+
+function updateAudioToggle(){
+  if (!audioToggle) return;
+  audioToggle.textContent = ambient.active ? '🔊' : '🔈';
+  audioToggle.classList.toggle('on', ambient.active);
+  audioToggle.setAttribute('aria-pressed', ambient.active ? 'true' : 'false');
+  audioToggle.setAttribute('aria-label', ambient.active ? 'Выключить атмосферный звук' : 'Включить атмосферный звук');
+}
+
+function startAmbient(auto = false){
+  const state = ensureAmbient();
+  if (!state) {
+    if (audioToggle) audioToggle.style.display = 'none';
+    return;
+  }
+  const { audio } = state;
+  const playPromise = audio.play();
+  if (playPromise && typeof playPromise.then === 'function') {
+    playPromise.catch(() => {
+      if (audioToggle) audioToggle.style.display = 'none';
+    });
+  }
+  const target = auto ? 0.24 : 0.32;
+  fadeAudioTo(audio, target, 3.2);
+  state.active = true;
+  updateAudioToggle();
+}
+
+function stopAmbient(){
+  if (!ambient.audio || !ambient.active) return;
+  const audio = ambient.audio;
+  fadeAudioTo(audio, 0.0001, 2.2, () => {
+    if (audio.volume <= 0.001) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  });
+  ambient.active = false;
+  updateAudioToggle();
+}
+
+function toggleAmbient(){
+  if (ambient.active) stopAmbient(); else startAmbient();
+}
+
+if (audioToggle){
+  audioToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleAmbient();
+  });
+  updateAudioToggle();
+}
+
+function handleFirstInteraction(event){
+  if (ambient.active) return;
+  if (audioToggle && audioToggle.contains(event.target)) return;
+  startAmbient(true);
+}
+
+document.addEventListener('pointerdown', handleFirstInteraction, { once: true });
+document.addEventListener('keydown', (event) => {
+  if (ambient.active) return;
+  const tag = event.target && event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+  startAmbient(true);
+}, { once: true });
 
 // Инициализация после завершения интро
 function initBackground(){
