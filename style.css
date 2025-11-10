@@ -29,6 +29,15 @@ animation:twinkle var(--tw,2.8s) ease-in-out infinite;cursor:pointer;border:none
 box-shadow:0 0 16px rgba(255,126,191,.8),0 0 34px rgba(255,114,185,.45)}
 .star.visited::before{background:linear-gradient(90deg,rgba(255,158,205,0),rgba(255,158,205,.95),rgba(255,158,205,0))}
 .star.visited::after{background:linear-gradient(0deg,rgba(255,158,205,0),rgba(255,158,205,.95),rgba(255,158,205,0))}
+.star.heart-star{transform:translate(-50%,-50%) rotate(var(--heart-tilt,0deg));animation:twinkle var(--tw,2.8s) ease-in-out infinite,heartPulse 6.4s ease-in-out infinite;transition:left 2.8s cubic-bezier(.22,.68,.3,1),top 2.8s cubic-bezier(.22,.68,.3,1);box-shadow:0 0 26px rgba(255,144,213,.88),0 0 70px rgba(255,120,198,.46)}
+.star.heart-star::before{opacity:.95}
+.star.heart-star::after{opacity:.95}
+@keyframes heartPulse{0%,100%{transform:translate(-50%,-50%) rotate(var(--heart-tilt,0deg)) scale(1.08);box-shadow:0 0 28px rgba(255,150,220,.9),0 0 90px rgba(255,130,206,.55)}50%{transform:translate(-50%,-50%) rotate(var(--heart-tilt,0deg)) scale(1.24);box-shadow:0 0 38px rgba(255,168,228,.98),0 0 120px rgba(255,146,214,.68)}}
+#stars-layer.heart-mode{pointer-events:none}
+#stars-layer.heart-mode .star{pointer-events:none}
+.heart-outline{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.heart-outline path{fill:none;stroke:#ff8fd8;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 22px rgba(255,134,210,.52));transition:stroke-dashoffset 5.4s cubic-bezier(.35,.75,.2,1)}
+.heart-outline path.draw{stroke:#ff9fdf}
 .constellation-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
 .constellation-lines line{stroke:rgba(210,220,255,.85);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:8 18;filter:drop-shadow(0 0 6px rgba(180,200,255,.6));animation:constellationFlow var(--flow-duration,5s) linear infinite,constellationPulse var(--pulse-duration,3.6s) ease-in-out infinite}
 @keyframes constellationFlow{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-26}}
