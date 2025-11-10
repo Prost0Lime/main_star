@@ -53,6 +53,8 @@ const spaceWrapper = document.getElementById('space-wrapper');
 const space = document.getElementById('space');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
+const HINT_DEFAULT_TEXT = hint ? hint.textContent : '';
+const HINT_HEART_MESSAGE = 'С любовью ...';
 const audioToggle = document.getElementById('audioToggle');
 
 const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -924,6 +926,11 @@ function createHeartOutline(layout, animate = false){
     starsLayer.appendChild(svg);
   }
   heartLineSvg = svg;
+  if (hint){
+    hint.textContent = HINT_HEART_MESSAGE;
+    hint.classList.remove('hidden');
+    hint.classList.add('show');
+  }
 }
 
 function startHeartFinale(){
@@ -961,6 +968,9 @@ function placeFeaturedStars(){
   if (!starsLayer) return;
   starsLayer.innerHTML = '';
   starsLayer.style.pointerEvents = 'none';
+  if (hint && HINT_DEFAULT_TEXT){
+    hint.textContent = HINT_DEFAULT_TEXT;
+  }
   allStars = [];
   visitedStars.clear();
   pendingHeartFinale = false;
