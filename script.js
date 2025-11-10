@@ -61,6 +61,7 @@ INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.
 
 let startTime = null;
 let introFinished = false;
+let backgroundStarted = false;
 
 function lerp(a,b,t){ return a + (b-a)*t; }
 function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
@@ -71,15 +72,15 @@ function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
 function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
 
 const SKY = {
-  top: { day: '#304b7a', dusk: '#1f2a4e', night: '#05070b' },
-  mid: { day: '#8aa1d1', dusk: '#2f3d68', night: '#0b1527' },
-  bot: { day: '#f2b36a', dusk: '#52386d', night: '#05070b' },
+  top: { day: '#304b7a', dusk: '#26365d', night: '#050b16' },
+  mid: { day: '#8aa1d1', dusk: '#3a4870', night: '#071327' },
+  bot: { day: '#f2b36a', dusk: '#5d3769', night: '#0b1a2e' },
 };
 
 const HORIZON = {
-  top: { dusk: '#f7c27b', night: '#213052' },
-  mid: { dusk: '#563564', night: '#151f34' },
-  botOpacity: { dusk: 0.25, night: 0 },
+  top: { dusk: '#f7c27b', night: '#18233d' },
+  mid: { dusk: '#563564', night: '#10192c' },
+  botOpacity: { dusk: 0.22, night: 0 },
 };
 
 const LAMP = {
@@ -95,6 +96,10 @@ function animateIntro(ts){
   const sunsetProgress = easeInOutCubic(clamp(t / INTRO.SUNSET_DURATION, 0, 1));
   const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
   const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
+
+  if (!backgroundStarted && nightProgress > 0.35) {
+    initBackground();
+  }
 
   const stageTop = mixColor(SKY.top.day, SKY.top.dusk, sunsetProgress);
   const stageMid = mixColor(SKY.mid.day, SKY.mid.dusk, sunsetProgress);
@@ -126,13 +131,13 @@ function animateIntro(ts){
 
   const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
   const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
-  const cameraFade = clamp(cameraProgress, 0, 1);
   if (scene) {
     const lift = lerp(0, CAMERA.LIFT, cameraProgress);
     const scale = lerp(1, CAMERA.SCALE, cameraProgress);
     scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
   }
-  intro.style.opacity = (1 - cameraFade * 0.35).toFixed(3);
+  const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
+  intro.style.opacity = (1 - fadeBlend).toFixed(3);
 
   const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;
   const lampProgress = easeInOutCubic(clamp((t - lampStart) / INTRO.LAMP_FADE, 0, 1));
@@ -237,9 +242,17 @@ function renderBackground(t){
   const dt = (t - t0)/1000; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
-  const g = bgCtx.createRadialGradient(W*0.5,H*0.9,Math.min(W,H)*0.05, W*0.5,H*0.5, Math.max(W,H)*0.7);
-  g.addColorStop(0,'#091221');
-  g.addColorStop(1,'#000000');
+  const g = bgCtx.createRadialGradient(
+    W * 0.5,
+    H * 0.85,
+    Math.min(W, H) * 0.08,
+    W * 0.5,
+    H * 0.45,
+    Math.max(W, H) * 0.9
+  );
+  g.addColorStop(0, '#050b16');
+  g.addColorStop(0.55, '#081327');
+  g.addColorStop(1, '#0b1a2e');
   bgCtx.fillStyle = g;
   bgCtx.fillRect(0,0,W,H);
 
@@ -353,6 +366,8 @@ function renderFx(t){
 
 // Инициализация после завершения интро
 function initBackground(){
+  if (backgroundStarted) return;
+  backgroundStarted = true;
   window.addEventListener('resize', resize, {passive:true});
   resize();
   requestAnimationFrame(renderBackground);
