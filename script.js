@@ -13,10 +13,18 @@ const intro = document.getElementById('intro');
 const skyTop = document.getElementById('skyTop');
 const skyMid = document.getElementById('skyMid');
 const skyBot = document.getElementById('skyBot');
+const horizonTop = document.getElementById('horizonTop');
+const horizonMid = document.getElementById('horizonMid');
+const horizonBot = document.getElementById('horizonBot');
 const sunGroup = document.getElementById('sunGroup');
+const sun = document.getElementById('sun');
 const clouds = document.getElementById('clouds');
 const lampLight = document.getElementById('lampLight');
 const bulb = document.getElementById('bulb');
+const lampGround = document.getElementById('lampGround');
+const horizonGlow = document.getElementById('horizonGlow');
+const introStarsGroup = document.getElementById('introStars');
+const introStarDots = introStarsGroup ? Array.from(introStarsGroup.querySelectorAll('circle')) : [];
 const introText = document.getElementById('introText');
 
 const bg = document.getElementById('bg');
@@ -29,50 +37,111 @@ const dpr = Math.min(2, window.devicePixelRatio || 1);
 // === ЭТАПЫ ИНТРО ===
 // Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
 const INTRO = {
-  SUNSET_DURATION: 7.0,
-  NIGHT_FADE: 3.0,
-  STARS_DELAY: 0.5,
+  SUNSET_DURATION: 6.0,
+  BLUE_HOUR: 3.0,
+  NIGHT_FALL: 3.5,
+  STARS_DELAY: 0.8,
+  STARS_FADE: 3.0,
+  LAMP_DELAY: 0.5,
+  LAMP_FADE: 2.2,
+  HOLD: 1.2,
 };
 
+INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
+const finaleTail = Math.max(INTRO.STARS_DELAY + INTRO.STARS_FADE, INTRO.LAMP_DELAY + INTRO.LAMP_FADE);
+INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.HOLD;
+
 let startTime = null;
+let introFinished = false;
 
 function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function easeInOutCubic(x){
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
+function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
+function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
+
+const SKY = {
+  top: { day: '#304b7a', dusk: '#1f2a4e', night: '#05070b' },
+  mid: { day: '#8aa1d1', dusk: '#2f3d68', night: '#0b1527' },
+  bot: { day: '#f2b36a', dusk: '#52386d', night: '#05070b' },
+};
+
+const HORIZON = {
+  top: { dusk: '#f7c27b', night: '#213052' },
+  mid: { dusk: '#563564', night: '#151f34' },
+  botOpacity: { dusk: 0.25, night: 0 },
+};
+
+const LAMP = {
+  bulbOff: '#2a2f3a',
+  bulbOn: '#ffc66e',
+};
 
 function animateIntro(ts){
+  if (introFinished) return;
   if(!startTime) startTime = ts;
   const t = (ts - startTime) / 1000;
 
-  // 1) Солнце опускается, небо из тёплого в холодное, облака двигаются влево
-  const t1 = Math.min(1, t / INTRO.SUNSET_DURATION);
-  // Небо: с вечера (#304b7a → #0b1324), средний: (#8aa1d1 → #162139), низ: (#f2b36a → #0b1324)
-  skyTop.setAttribute('stop-color', mixColor("#304b7a", "#0b1324", t1));
-  skyMid.setAttribute('stop-color', mixColor("#8aa1d1", "#162139", t1));
-  skyBot.setAttribute('stop-color', mixColor("#f2b36a", "#0b1324", t1));
+  const sunsetProgress = easeInOutCubic(clamp(t / INTRO.SUNSET_DURATION, 0, 1));
+  const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
+  const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
 
-  // Солнце: опустить и чуть уменьшить
-  const sunY = lerp(560, 650, t1);
-  const sunScale = lerp(1, 0.85, t1);
+  const stageTop = mixColor(SKY.top.day, SKY.top.dusk, sunsetProgress);
+  const stageMid = mixColor(SKY.mid.day, SKY.mid.dusk, sunsetProgress);
+  const stageBot = mixColor(SKY.bot.day, SKY.bot.dusk, sunsetProgress);
+
+  skyTop.setAttribute('stop-color', mixColor(stageTop, SKY.top.night, twilightProgress));
+  skyMid.setAttribute('stop-color', mixColor(stageMid, SKY.mid.night, twilightProgress));
+  skyBot.setAttribute('stop-color', mixColor(stageBot, SKY.bot.night, twilightProgress));
+
+  horizonTop.setAttribute('stop-color', mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress));
+  horizonTop.setAttribute('stop-opacity', (0.95 * (1 - twilightProgress * 0.75)).toFixed(3));
+  horizonMid.setAttribute('stop-color', mixColor(HORIZON.mid.dusk, HORIZON.mid.night, twilightProgress));
+  horizonMid.setAttribute('stop-opacity', (0.55 * (1 - twilightProgress * 0.9)).toFixed(3));
+  horizonBot.setAttribute('stop-opacity', (HORIZON.botOpacity.dusk * (1 - twilightProgress)).toFixed(3));
+  horizonGlow.setAttribute('opacity', (0.9 * (1 - twilightProgress) * (1 - nightProgress * 0.85)).toFixed(3));
+
+  const sunY = lerp(560, 720, sunsetProgress);
+  const sunScale = lerp(1, 0.78, sunsetProgress);
   sunGroup.setAttribute('transform', `translate(0, ${sunY-560}) scale(${sunScale})`);
+  sun.setAttribute('opacity', Math.max(0, 1 - sunsetProgress * 0.85 - twilightProgress * 0.6).toFixed(3));
 
-  // Облака: плывут влево и слегка растворяются к концу 1 этапа
-  const cloudShift = -40 * t1;
-  clouds.setAttribute('transform', `translate(${cloudShift}, 0)`);
-  clouds.setAttribute('opacity', String(0.9 * (1 - t1*0.6)));
+  const cloudShift = lerp(0, -150, sunsetProgress) + lerp(0, -80, twilightProgress);
+  clouds.setAttribute('transform', `translate(${cloudShift}, ${-8 * sunsetProgress})`);
+  const cloudOpacity = 0.9 * (1 - sunsetProgress * 0.4) * (1 - twilightProgress) * (1 - nightProgress);
+  clouds.setAttribute('opacity', Math.max(0, cloudOpacity).toFixed(3));
 
-  // 2) Переход к ночи: облака исчезают, небо темнеет ещё, текст пропадает
-  const t2 = Math.max(0, Math.min(1, (t - INTRO.SUNSET_DURATION) / INTRO.NIGHT_FADE));
-  if (t2 > 0){
-    skyTop.setAttribute('stop-color', mixColor(skyTop.getAttribute('stop-color'), "#05070b", t2));
-    skyMid.setAttribute('stop-color', mixColor(skyMid.getAttribute('stop-color'), "#0f1726", t2));
-    skyBot.setAttribute('stop-color', mixColor(skyBot.getAttribute('stop-color'), "#05070b", t2));
-    clouds.setAttribute('opacity', String(0.3 * (1 - t2)));
-    introText.setAttribute('opacity', String(0.9 * (1 - t2)));
+  const textOpacity = Math.max(0, 0.95 * (1 - sunsetProgress * 1.1));
+  introText.setAttribute('opacity', textOpacity.toFixed(3));
+
+  const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;
+  const lampProgress = easeInOutCubic(clamp((t - lampStart) / INTRO.LAMP_FADE, 0, 1));
+  lampLight.setAttribute('opacity', lampProgress.toFixed(3));
+  bulb.setAttribute('fill', mixColor(LAMP.bulbOff, LAMP.bulbOn, lampProgress));
+  if (lampGround) {
+    lampGround.setAttribute('opacity', (0.7 * lampProgress).toFixed(3));
   }
 
-  // 3) Ночь: включаем лампу, скрываем интро и показываем звёзды
-  if (t >= INTRO.SUNSET_DURATION + INTRO.NIGHT_FADE + INTRO.STARS_DELAY){
-    lampLight.setAttribute('opacity', "1");
-    bulb.setAttribute('fill', "#ffc66e");
+  if (introStarsGroup) {
+    const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
+    const starsProgress = easeOutCubic(clamp((t - starsStart) / INTRO.STARS_FADE, 0, 1));
+    introStarsGroup.setAttribute('opacity', starsProgress.toFixed(3));
+    introStarDots.forEach((star, idx) => {
+      const base = parseFloat(star.dataset.baseR || star.getAttribute('r'));
+      const local = clamp(starsProgress * 1.2 - idx * 0.07, 0, 1);
+      const eased = easeOutQuad(local);
+      star.setAttribute('r', (base * (0.75 + eased * 0.6)).toFixed(2));
+    });
+  }
+
+  if (t >= INTRO.TOTAL) {
+    lampLight.setAttribute('opacity', '1');
+    bulb.setAttribute('fill', LAMP.bulbOn);
+    if (lampGround) {
+      lampGround.setAttribute('opacity', '0.7');
+    }
     endIntro();
     return;
   }
@@ -81,6 +150,7 @@ function animateIntro(ts){
 }
 
 function endIntro(){
+  introFinished = true;
   intro.classList.add('hidden');
   // Запуск ночного фона и звёзд
   initBackground();
