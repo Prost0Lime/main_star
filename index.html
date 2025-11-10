@@ -9,20 +9,37 @@
 <body>
   <div id="app">
     <!-- INTRO: Сцена заката → ночь -->
-    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" role="img" aria-label="вечерний горизонт">
+    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" role="img" aria-label="вечерний горизонт">
       <defs>
         <!-- Небо: градиент от вечера к ночи (анимируется классами) -->
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="skyTop" offset="0%" stop-color="#304b7a"/>
-          <stop id="skyMid" offset="60%" stop-color="#8aa1d1"/>
-          <stop id="skyBot" offset="100%" stop-color="#f2b36a"/>
+          <stop id="skyTop" offset="0%" stop-color="#4f7fbc"/>
+          <stop id="skyMid" offset="60%" stop-color="#9ab6e6"/>
+          <stop id="skyBot" offset="100%" stop-color="#f6c38f"/>
+        </linearGradient>
+
+        <linearGradient id="duneGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#202c46" />
+          <stop offset="60%" stop-color="#141e33" />
+          <stop offset="100%" stop-color="#0d1525" />
+        </linearGradient>
+
+        <linearGradient id="hillGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#131c2c" />
+          <stop offset="45%" stop-color="#0f1927" />
+          <stop offset="100%" stop-color="#0a1220" />
         </linearGradient>
 
         <!-- Сумеречное свечение у горизонта -->
         <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="horizonTop" offset="0%" stop-color="#f7c27b" stop-opacity="0.95" />
-          <stop id="horizonMid" offset="50%" stop-color="#563564" stop-opacity="0.55" />
-          <stop id="horizonBot" offset="100%" stop-color="#0a0e14" stop-opacity="0" />
+          <stop id="horizonTop" offset="0%" stop-color="#f3c27f" stop-opacity="0.92" />
+          <stop id="horizonMid" offset="55%" stop-color="#6b4c7c" stop-opacity="0.48" />
+          <stop id="horizonBot" offset="100%" stop-color="#08101c" stop-opacity="0" />
+        </linearGradient>
+
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#131b2a" />
+          <stop offset="100%" stop-color="#060b16" />
         </linearGradient>
 
         <!-- Солнечный диск с мягким свечением -->
@@ -32,98 +49,54 @@
           <stop offset="100%" stop-color="#ff9a3c" stop-opacity="0"/>
         </radialGradient>
 
-        <!-- Ламповый тёплый свет фонаря -->
-        <radialGradient id="lampGlow" cx="50%" cy="0%" r="100%">
-          <stop offset="0%" stop-color="rgba(255,213,120,0.85)"/>
-          <stop offset="60%" stop-color="rgba(255,190,90,0.35)"/>
-          <stop offset="100%" stop-color="rgba(255,170,60,0)"/>
-        </radialGradient>
-
-        <radialGradient id="groundGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="rgba(255,195,120,0.4)" />
-          <stop offset="80%" stop-color="rgba(255,195,120,0.05)" />
-          <stop offset="100%" stop-color="rgba(255,195,120,0)" />
-        </radialGradient>
-
-        <!-- Туман/световой конус от фонаря -->
-        <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="rgba(255,210,120,0.35)"/>
-          <stop offset="100%" stop-color="rgba(255,210,120,0)"/>
-        </linearGradient>
-
         <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3"/>
         </filter>
       </defs>
 
-      <!-- Небо -->
-      <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
+      <g id="scene">
+        <!-- Небо -->
+        <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
 
-      <!-- Солнце -->
-      <g id="sunGroup">
-        <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
-      </g>
-
-      <!-- Пара лёгких облаков -->
-      <!-- Тучки -->
-      <g id="clouds" fill="#ffffff" opacity="0.9" filter="url(#softBlur)">
-        <path d="M-80,220 q40,-20 80,0 q30,-30 65,0 q28,-25 56,0 q45,-18 90,0 q40,28 -20,40 q-40,8 -120,8 q-100,0 -130,-10 q-60,-12 -21,-38z"/>
-        <path d="M-60,300 q50,-18 90,0 q40,-24 70,0 q35,-26 70,0 q55,-18 120,0 q40,26 -15,40 q-50,10 -140,10 q-120,0 -150,-12 q-70,-14 -25,-38z"/>
-      </g>
-
-      <!-- Звёзды ночного неба (постепенно проявляются) -->
-      <g id="introStars" opacity="0" fill="#f5f7ff">
-        <circle cx="60" cy="160" r="1.2" data-base-r="1.2" />
-        <circle cx="130" cy="120" r="1.6" data-base-r="1.6" />
-        <circle cx="210" cy="90" r="1.1" data-base-r="1.1" />
-        <circle cx="320" cy="140" r="1.4" data-base-r="1.4" />
-        <circle cx="250" cy="200" r="1.2" data-base-r="1.2" />
-        <circle cx="90" cy="220" r="1.5" data-base-r="1.5" />
-        <circle cx="170" cy="180" r="1.3" data-base-r="1.3" />
-        <circle cx="300" cy="80" r="1.1" data-base-r="1.1" />
-        <circle cx="40" cy="110" r="1" data-base-r="1" />
-        <circle cx="350" cy="200" r="1.2" data-base-r="1.2" />
-      </g>
-
-      <!-- Земля/горизонт -->
-      <g id="ground">
-        <rect x="0" y="640" width="390" height="204" fill="#0a0e14"/>
-        <path id="horizonGlow" d="M0,618 q70,-24 140,-16 q52,8 110,-4 q52,-12 100,12 l40,18 v64 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
-        <!-- Дальний горизонт (силуэты холмов) -->
-        <path d="M0,640 q60,-18 120,-6 q40,10 80,0 q40,-10 80,6 q30,10 110,0 L390,844 L0,844 Z"
-              fill="#0e1622"/>
-        <ellipse id="lampGround" cx="300" cy="724" rx="70" ry="26" fill="url(#groundGlow)" opacity="0" />
-      </g>
-
-      <!-- Фонарь -->
-      <g id="lamp" transform="translate(300,640)">
-        <!-- Столб -->
-        <rect x="-3" y="-130" width="6" height="140" fill="#1c2534"/>
-        <!-- Плафон -->
-        <rect x="-12" y="-140" width="24" height="14" rx="4" ry="4" fill="#1c2534"/>
-        <rect id="bulb" x="-6" y="-137" width="12" height="10" rx="3" ry="3" fill="#2a2f3a"/>
-        <!-- Тёплая засветка (включается ночью) -->
-        <g id="lampLight" opacity="0">
-          <circle cx="0" cy="-132" r="22" fill="url(#lampGlow)" />
-          <path d="M-50,-125 L50,-125 L80,30 L-80,30 Z" fill="url(#lampCone)"/>
+        <!-- Солнце -->
+        <g id="sunGroup">
+          <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
         </g>
-      </g>
 
-      <!-- Мальчик (силуэт) -->
-      <g id="boy" transform="translate(110,640)" fill="#0a0f18">
-        <path d="M0,0 q12,-24 24,0 v16 h-24z"/> <!-- тень под ноги -->
-        <path d="M12,-68 q-8,10 -6,24 q2,16 14,24 q4,2 8,0 q14,-8 16,-24 q2,-14 -6,-24 q-8,-10 -18,-10 q-10,0 -8,10z" fill="#121a25"/> <!-- голова/шапка -->
-        <path d="M4,-52 q-6,12 -6,28 v36 h34 v-36 q0,-16 -8,-28 q-6,-10 -20,0z" fill="#121a25"/> <!-- корпус -->
-        <path d="M6,12 v-24 h6 v24z" /> <!-- нога -->
-        <path d="M22,12 v-24 h6 v24z" /> <!-- нога -->
-        <path d="M-4,-44 q10,6 14,10 q4,6 2,12 q-6,6 -14,0 q-8,-6 -10,-12 q-2,-10 8,-10z" /> <!-- рука -->
-      </g>
+        <!-- Пара лёгких облаков -->
+        <!-- Облака наполняются скриптом для небольших, случайных форм -->
+        <g id="clouds" filter="url(#softBlur)"></g>
 
-      <!-- Текст-приглашение -->
-      <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
-            style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
-        Смотри, как день становится ночью…
-      </text>
+        <!-- Звёзды ночного неба (постепенно проявляются) -->
+        <g id="introStars" opacity="0" fill="#f7fbff">
+          <circle cx="58" cy="150" r="1.3" data-base-r="1.3" />
+          <circle cx="124" cy="108" r="1.7" data-base-r="1.7" />
+          <circle cx="198" cy="88" r="1.2" data-base-r="1.2" />
+          <circle cx="308" cy="136" r="1.5" data-base-r="1.5" />
+          <circle cx="246" cy="198" r="1.3" data-base-r="1.3" />
+          <circle cx="86" cy="212" r="1.6" data-base-r="1.6" />
+          <circle cx="166" cy="176" r="1.35" data-base-r="1.35" />
+          <circle cx="292" cy="78" r="1.2" data-base-r="1.2" />
+          <circle cx="36" cy="110" r="1.05" data-base-r="1.05" />
+          <circle cx="348" cy="190" r="1.3" data-base-r="1.3" />
+        </g>
+
+        <!-- Земля/горизонт -->
+        <g id="ground">
+          <path id="groundBase" d="M-18,656 C 60,610 156,598 254,618 C 318,631 374,658 404,690 V844 H-18 Z" fill="url(#groundGrad)"/>
+          <path id="horizonGlow" d="M-24,606 C 60,568 174,562 288,580 C 342,589 382,606 410,632 V752 H-24 Z" fill="url(#horizonGrad)" opacity="0.92"/>
+          <!-- Дальний горизонт (силуэты холмов) -->
+          <path d="M-36,664 C 42,620 148,606 240,620 C 314,632 370,656 414,694 V844 H-36 Z"
+                fill="url(#duneGrad)"/>
+          <path d="M-30,710 C 52,662 168,654 272,680 C 332,696 394,722 424,760 V844 H-30 Z" fill="url(#hillGrad)"/>
+        </g>
+
+        <!-- Текст-приглашение -->
+        <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
+              style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
+          Смотри, как день становится ночью…
+        </text>
+      </g>
     </svg>
 
     <!-- После интро: фоновой канвас со звёздами и слой звёзд -->
