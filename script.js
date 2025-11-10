@@ -58,7 +58,10 @@ const audioToggle = document.getElementById('audioToggle');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
 const SPACE_MULTIPLIER = 3.2;
-const SPACE_VIEW_SCALE = 0.82;
+const INITIAL_SPACE_SCALE = 0.82;
+const MIN_SPACE_SCALE = 0.62;
+const MAX_SPACE_SCALE = 1.38;
+let spaceViewScale = INITIAL_SPACE_SCALE;
 let spaceWidth = window.innerWidth;
 let spaceHeight = window.innerHeight;
 let viewX = 0;
@@ -74,6 +77,9 @@ let originViewY = 0;
 let panMovedDuringGesture = false;
 let panJustHappened = false;
 let activeConstellation = [];
+let pinchActive = false;
+let pinchBase = null;
+const activePointers = new Map();
 
 const CONSTELLATION_TEMPLATE = [
   { id: 1, x: 64, y: 312, size: 11.5, tw: 3.4 },
@@ -323,7 +329,45 @@ function updateSpaceTransform(){
   if (!space) return;
   viewX = clamp(viewX, 0, maxViewX);
   viewY = clamp(viewY, 0, maxViewY);
-  space.style.transform = `translate(${-viewX}px, ${-viewY}px) scale(${SPACE_VIEW_SCALE})`;
+  const scale = spaceViewScale;
+  const tx = -viewX / scale;
+  const ty = -viewY / scale;
+  space.style.transform = `scale(${scale}) translate(${tx}px, ${ty}px)`;
+}
+
+function updateViewBounds(vw = window.innerWidth, vh = window.innerHeight){
+  const scaledViewWidth = vw / spaceViewScale;
+  const scaledViewHeight = vh / spaceViewScale;
+  maxViewX = Math.max(0, spaceWidth - scaledViewWidth);
+  maxViewY = Math.max(0, spaceHeight - scaledViewHeight);
+}
+
+function markInteractionComplete(){
+  panJustHappened = true;
+  requestAnimationFrame(() => { panJustHappened = false; });
+}
+
+function setPanningActive(active){
+  if (!spaceWrapper) return;
+  if (active){
+    spaceWrapper.classList.add('panning');
+  } else {
+    spaceWrapper.classList.remove('panning');
+  }
+}
+
+function applyScale(targetScale, anchorX = window.innerWidth / 2, anchorY = window.innerHeight / 2){
+  const prevScale = spaceViewScale;
+  const nextScale = clamp(targetScale, MIN_SPACE_SCALE, MAX_SPACE_SCALE);
+  if (Math.abs(nextScale - prevScale) < 1e-4) return false;
+  const worldX = viewX + anchorX / prevScale;
+  const worldY = viewY + anchorY / prevScale;
+  spaceViewScale = nextScale;
+  updateViewBounds();
+  viewX = worldX - anchorX / spaceViewScale;
+  viewY = worldY - anchorY / spaceViewScale;
+  updateSpaceTransform();
+  return true;
 }
 
 function resize(){
@@ -347,10 +391,7 @@ function resize(){
     spaceHeight = Math.max(vh, prevHeight);
   }
 
-  const scaledViewWidth = vw / SPACE_VIEW_SCALE;
-  const scaledViewHeight = vh / SPACE_VIEW_SCALE;
-  maxViewX = Math.max(0, spaceWidth - scaledViewWidth);
-  maxViewY = Math.max(0, spaceHeight - scaledViewHeight);
+  updateViewBounds(vw, vh);
 
   if (!viewInitialized){
     viewX = maxViewX / 2;
@@ -388,53 +429,169 @@ function resize(){
   }
 }
 
-function handlePanPointerDown(e){
-  if (!spaceWrapper) return;
-  if (typeof e.button === 'number' && e.button !== 0) return;
-  panPointerId = e.pointerId;
-  panStartX = e.clientX;
-  panStartY = e.clientY;
-  originViewX = viewX;
-  originViewY = viewY;
-  panMovedDuringGesture = false;
+function startPinch(){
+  if (activePointers.size < 2) return;
+  const iterator = activePointers.values();
+  const first = iterator.next().value;
+  const second = iterator.next().value;
+  if (!first || !second) return;
+  const distance = Math.hypot(first.x - second.x, first.y - second.y);
+  if (distance <= 0) return;
+  const centerX = (first.x + second.x) / 2;
+  const centerY = (first.y + second.y) / 2;
+  pinchActive = true;
+  pinchBase = {
+    distance,
+    scale: spaceViewScale,
+    centerX,
+    centerY,
+    worldCenterX: viewX + centerX / spaceViewScale,
+    worldCenterY: viewY + centerY / spaceViewScale,
+  };
+  panPointerId = null;
+  panMovedDuringGesture = true;
+  setPanningActive(true);
+  if (spaceWrapper && typeof spaceWrapper.setPointerCapture === 'function'){
+    for (const id of activePointers.keys()){
+      try { spaceWrapper.setPointerCapture(id); } catch (_) {}
+    }
+  }
 }
 
-function handlePanPointerMove(e){
-  if (panPointerId === null || e.pointerId !== panPointerId) return;
+function handleSpacePointerDown(e){
+  if (!spaceWrapper) return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  if (!viewInitialized) return;
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 1){
+    panPointerId = e.pointerId;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    originViewX = viewX;
+    originViewY = viewY;
+    panMovedDuringGesture = false;
+  } else if (activePointers.size === 2){
+    startPinch();
+  }
+}
+
+function handleSpacePointerMove(e){
+  if (!activePointers.has(e.pointerId)) return;
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pinchActive && pinchBase){
+    const iterator = activePointers.values();
+    const first = iterator.next().value;
+    const second = iterator.next().value;
+    if (first && second){
+      const distance = Math.hypot(first.x - second.x, first.y - second.y);
+      if (distance > 0){
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const rawScale = pinchBase.scale * (distance / pinchBase.distance);
+        spaceViewScale = clamp(rawScale, MIN_SPACE_SCALE, MAX_SPACE_SCALE);
+        updateViewBounds();
+        viewX = pinchBase.worldCenterX - centerX / spaceViewScale;
+        viewY = pinchBase.worldCenterY - centerY / spaceViewScale;
+        updateSpaceTransform();
+      }
+    }
+    return;
+  }
+
+  if (panPointerId !== e.pointerId) return;
   const dx = e.clientX - panStartX;
   const dy = e.clientY - panStartY;
   if (!panMovedDuringGesture && Math.hypot(dx, dy) > 6){
     panMovedDuringGesture = true;
-    if (spaceWrapper){
-      spaceWrapper.classList.add('panning');
-      if (typeof spaceWrapper.setPointerCapture === 'function'){
-        spaceWrapper.setPointerCapture(panPointerId);
-      }
+    setPanningActive(true);
+    if (spaceWrapper && typeof spaceWrapper.setPointerCapture === 'function'){
+      try { spaceWrapper.setPointerCapture(panPointerId); } catch (_) {}
     }
   }
   if (!panMovedDuringGesture) return;
-  const invScale = 1 / SPACE_VIEW_SCALE;
+  const invScale = 1 / spaceViewScale;
   viewX = originViewX - dx * invScale;
   viewY = originViewY - dy * invScale;
   updateSpaceTransform();
 }
 
-function handlePanPointerUp(e){
-  if (panPointerId === null || (e && e.pointerId !== panPointerId)) return;
+function finishPanGesture(pointerId){
   if (spaceWrapper){
-    spaceWrapper.classList.remove('panning');
+    if (!pinchActive){
+      setPanningActive(false);
+    }
     if (typeof spaceWrapper.releasePointerCapture === 'function'){
-      if (!spaceWrapper.hasPointerCapture || spaceWrapper.hasPointerCapture(panPointerId)){
-        spaceWrapper.releasePointerCapture(panPointerId);
-      }
+      try { spaceWrapper.releasePointerCapture(pointerId); } catch (_) {}
     }
   }
   if (panMovedDuringGesture){
-    panJustHappened = true;
-    requestAnimationFrame(() => { panJustHappened = false; });
+    markInteractionComplete();
   }
   panPointerId = null;
   panMovedDuringGesture = false;
+}
+
+function handleSpacePointerUp(e){
+  if (!activePointers.has(e.pointerId)) return;
+
+  if (pinchActive){
+    if (spaceWrapper && typeof spaceWrapper.releasePointerCapture === 'function'){
+      try { spaceWrapper.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  }
+
+  activePointers.delete(e.pointerId);
+
+  if (pinchActive){
+    if (activePointers.size >= 2){
+      startPinch();
+      return;
+    }
+    if (activePointers.size < 2){
+      if (panMovedDuringGesture){
+        markInteractionComplete();
+      }
+      pinchActive = false;
+      pinchBase = null;
+      if (activePointers.size === 1){
+        const [id, pos] = activePointers.entries().next().value;
+        panPointerId = id;
+        panStartX = pos.x;
+        panStartY = pos.y;
+        originViewX = viewX;
+        originViewY = viewY;
+        panMovedDuringGesture = false;
+      } else {
+        panPointerId = null;
+        panMovedDuringGesture = false;
+        setPanningActive(false);
+      }
+    }
+    return;
+  }
+
+  if (panPointerId === e.pointerId){
+    finishPanGesture(e.pointerId);
+  } else {
+    if (!pinchActive && activePointers.size === 0){
+      setPanningActive(false);
+    }
+  }
+}
+
+function handleSpaceWheel(e){
+  if (!spaceWrapper) return;
+  if (!viewInitialized) return;
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  const delta = e.deltaY;
+  if (!Number.isFinite(delta)) return;
+  const factor = Math.exp(-delta * 0.002);
+  const changed = applyScale(spaceViewScale * factor, e.clientX, e.clientY);
+  if (changed){
+    markInteractionComplete();
+  }
 }
 function genStarfield(){
   const layers = [
@@ -814,10 +971,11 @@ document.addEventListener('keydown', (event) => {
 }, { once: true });
 
 if (spaceWrapper){
-  spaceWrapper.addEventListener('pointerdown', handlePanPointerDown);
-  spaceWrapper.addEventListener('pointermove', handlePanPointerMove);
-  spaceWrapper.addEventListener('pointerup', handlePanPointerUp);
-  spaceWrapper.addEventListener('pointercancel', handlePanPointerUp);
+  spaceWrapper.addEventListener('pointerdown', handleSpacePointerDown);
+  spaceWrapper.addEventListener('pointermove', handleSpacePointerMove);
+  spaceWrapper.addEventListener('pointerup', handleSpacePointerUp);
+  spaceWrapper.addEventListener('pointercancel', handleSpacePointerUp);
+  spaceWrapper.addEventListener('wheel', handleSpaceWheel, { passive: false });
 }
 
 // Инициализация после завершения интро
