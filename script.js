@@ -40,8 +40,8 @@ const INTRO = {
   SUNSET_DURATION: 4.8,
   BLUE_HOUR: 1.8,
   NIGHT_FALL: 2.4,
-  STARS_DELAY: 0.2,
-  STARS_FADE: 1.9,
+  STARS_DELAY: 0,
+  STARS_FADE: 2.1,
   HOLD: 0.45,
 };
 
@@ -100,7 +100,7 @@ function initClouds(){
 const SKY = {
   top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
   mid: { day: '#9ab6e6', dusk: '#465c87', night: '#081327' },
-  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0c1b31' },
+  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0b1a2e' },
 };
 
 const HORIZON = {
@@ -118,7 +118,7 @@ function animateIntro(ts){
   const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
   const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
 
-  if (!backgroundStarted && nightProgress > 0.35) {
+  if (!backgroundStarted && nightProgress > 0.2) {
     initBackground();
   }
 
@@ -251,14 +251,7 @@ function renderBackground(t){
   const dt = (t - t0)/1000; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
-  const g = bgCtx.createRadialGradient(
-    W * 0.5,
-    H * 0.85,
-    Math.min(W, H) * 0.08,
-    W * 0.5,
-    H * 0.45,
-    Math.max(W, H) * 0.9
-  );
+  const g = bgCtx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#050b16');
   g.addColorStop(0.55, '#081327');
   g.addColorStop(1, '#0b1a2e');
