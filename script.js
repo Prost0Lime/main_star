@@ -22,7 +22,7 @@ const sun = document.getElementById('sun');
 const clouds = document.getElementById('clouds');
 const horizonGlow = document.getElementById('horizonGlow');
 const introStarsGroup = document.getElementById('introStars');
-const introStarDots = introStarsGroup ? Array.from(introStarsGroup.querySelectorAll('circle')) : [];
+let introStarDots = [];
 const introText = document.getElementById('introText');
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -35,14 +35,14 @@ const hint = document.getElementById('hint');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
 // === ЭТАПЫ ИНТРО ===
-// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды
+// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
 const INTRO = {
-  SUNSET_DURATION: 5,
+  SUNSET_DURATION: 4.8,
   BLUE_HOUR: 1.8,
-  NIGHT_FALL: 0.5,
+  NIGHT_FALL: 0,
   STARS_DELAY: 0,
   STARS_FADE: 0,
-  HOLD: 2,
+  HOLD: 0.45,
 };
 
 const CAMERA = {
@@ -94,6 +94,27 @@ function initClouds(){
       group.appendChild(circle);
     }
     clouds.appendChild(group);
+  }
+}
+
+function initIntroStars(){
+  if (!introStarsGroup) return;
+  introStarsGroup.innerHTML = '';
+  const count = 12;
+  introStarDots = [];
+  for (let i = 0; i < count; i++) {
+    const star = document.createElementNS(SVG_NS, 'circle');
+    const cx = rand(32, 358);
+    const cy = rand(56, 228);
+    const base = rand(0.9, 1.85);
+    star.setAttribute('cx', cx.toFixed(1));
+    star.setAttribute('cy', cy.toFixed(1));
+    star.setAttribute('r', base.toFixed(2));
+    star.dataset.baseR = base.toFixed(2);
+    star.dataset.delay = rand(0, 0.8).toFixed(3);
+    star.dataset.wobble = rand(0.18, 0.42).toFixed(3);
+    introStarsGroup.appendChild(star);
+    introStarDots.push(star);
   }
 }
 
@@ -163,13 +184,20 @@ function animateIntro(ts){
 
   if (introStarsGroup) {
     const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
-    const starsProgress = easeOutCubic(clamp((t - starsStart) / INTRO.STARS_FADE, 0, 1));
-    introStarsGroup.setAttribute('opacity', starsProgress.toFixed(3));
-    introStarDots.forEach((star, idx) => {
+    const inRaw = clamp((t - starsStart) / INTRO.STARS_FADE, 0, 1);
+    const starsProgress = easeInOutCubic(inRaw);
+    const fadeOut = 1 - easeInOutCubic(clamp((nightProgress - 0.42) / 0.46, 0, 1));
+    const starOpacity = starsProgress * fadeOut;
+    introStarsGroup.setAttribute('opacity', starOpacity.toFixed(3));
+    introStarDots.forEach((star) => {
       const base = parseFloat(star.dataset.baseR || star.getAttribute('r'));
-      const local = clamp(starsProgress * 1.2 - idx * 0.07, 0, 1);
-      const eased = easeOutQuad(local);
-      star.setAttribute('r', (base * (0.75 + eased * 0.6)).toFixed(2));
+      const delay = parseFloat(star.dataset.delay || '0');
+      const wobble = parseFloat(star.dataset.wobble || '0.28');
+      const localRaw = clamp((t - starsStart - delay) / (INTRO.STARS_FADE * 0.9), 0, 1);
+      const local = easeInOutCubic(localRaw);
+      const settle = 1 - easeInOutCubic(clamp((nightProgress - 0.58) / 0.34, 0, 1));
+      const pulse = 0.65 + local * 0.55 + Math.sin((t * 0.6 + delay * 3)) * wobble * settle;
+      star.setAttribute('r', Math.max(0.1, base * pulse * settle).toFixed(2));
     });
   }
 
@@ -248,7 +276,7 @@ function genStarfield(){
 }
 let t0 = performance.now();
 function renderBackground(t){
-  const dt = (t - t0)/100; t0 = t;
+  const dt = (t - t0)/1000; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
   const g = bgCtx.createLinearGradient(0, 0, 0, H);
@@ -377,6 +405,7 @@ function initBackground(){
 }
 
 // Старт анимации интро
+initIntroStars();
 initClouds();
 requestAnimationFrame(animateIntro);
 
