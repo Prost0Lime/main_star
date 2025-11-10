@@ -37,14 +37,21 @@ const dpr = Math.min(2, window.devicePixelRatio || 1);
 // === ЭТАПЫ ИНТРО ===
 // Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
 const INTRO = {
-  SUNSET_DURATION: 6.0,
-  BLUE_HOUR: 3.0,
-  NIGHT_FALL: 3.5,
-  STARS_DELAY: 0.8,
-  STARS_FADE: 3.0,
-  LAMP_DELAY: 0.5,
-  LAMP_FADE: 2.2,
-  HOLD: 1.2,
+  SUNSET_DURATION: 4.8,
+  BLUE_HOUR: 1.8,
+  NIGHT_FALL: 2.2,
+  STARS_DELAY: 0.25,
+  STARS_FADE: 1.8,
+  LAMP_DELAY: 0.2,
+  LAMP_FADE: 1.6,
+  HOLD: 0.35,
+};
+
+const CAMERA = {
+  START_OFFSET: 0.55,
+  DURATION: 3.2,
+  LIFT: 26,
+  SCALE: 1.05,
 };
 
 INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
@@ -116,6 +123,14 @@ function animateIntro(ts){
   const textOpacity = Math.max(0, 0.95 * (1 - sunsetProgress * 1.1));
   introText.setAttribute('opacity', textOpacity.toFixed(3));
 
+  const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
+  const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
+  const lift = lerp(0, -CAMERA.LIFT, cameraProgress);
+  const scale = lerp(1, CAMERA.SCALE, cameraProgress);
+  const cameraFade = clamp(cameraProgress, 0, 1);
+  intro.style.transform = `translateY(${lift}%) scale(${scale.toFixed(3)})`;
+  intro.style.opacity = (1 - cameraFade * 0.35).toFixed(3);
+
   const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;
   const lampProgress = easeInOutCubic(clamp((t - lampStart) / INTRO.LAMP_FADE, 0, 1));
   lampLight.setAttribute('opacity', lampProgress.toFixed(3));
@@ -151,6 +166,7 @@ function animateIntro(ts){
 
 function endIntro(){
   introFinished = true;
+  intro.style.opacity = '0';
   intro.classList.add('hidden');
   // Запуск ночного фона и звёзд
   initBackground();
