@@ -5,8 +5,28 @@ const MEMORIES = [
   { src: "assets/memory3.jpg", caption: "«Смотри — даже звёзды улыбаются.»" },
   { src: "assets/memory4.jpg", caption: "«Ты — моё любимое созвездие.»" },
   { src: "assets/memory5.jpg", caption: "«И в темноте нам светло.»" },
+  { src: "assets/memory6.jpg", caption: "«Твоё имя звучит как утренняя звезда.»" },
+  { src: "assets/memory7.jpg", caption: "«Мы считали тишину до первого смеха.»" },
+  { src: "assets/memory8.jpg", caption: "«Серебро ночи спуталось в твоих волосах.»" },
+  { src: "assets/memory9.jpg", caption: "«Доверяю тебе даже самые тихие мечты.»" },
+  { src: "assets/memory10.jpg", caption: "«Каждый вдох — как шаг по млечному пути.»" },
+  { src: "assets/memory11.jpg", caption: "«Пока ты рядом, вселенная становится тесной.»" },
+  { src: "assets/memory12.jpg", caption: "«Ты научила меня слушать свет.»" },
+  { src: "assets/memory13.jpg", caption: "«Мы прячем желания в кончиках пальцев.»" },
+  { src: "assets/memory14.jpg", caption: "«Искры от твоего взгляда рассыпались кометами.»" },
+  { src: "assets/memory15.jpg", caption: "«Вместе мы — карта неба, которую никто не видел.»" },
+  { src: "assets/memory16.jpg", caption: "«Ночь дышит нашими секретами.»" },
+  { src: "assets/memory17.jpg", caption: "«Ты зажигаешь тёплые орбиты в моём сердце.»" },
+  { src: "assets/memory18.jpg", caption: "«Мы шепчем звёздам, чтобы не забыли дорогу назад.»" },
+  { src: "assets/memory19.jpg", caption: "«Каждый шаг с тобой звучит как музыка сфер.»" },
+  { src: "assets/memory20.jpg", caption: "«Ты — моё вечное «оставайся» даже в темноте.»" },
+  { src: "assets/memory21.jpg", caption: "«Мы смеёмся луной и пьём тишину глазами.»" },
+  { src: "assets/memory22.jpg", caption: "«В твоих ладонях спрятано северное сияние.»" },
+  { src: "assets/memory23.jpg", caption: "«Я верю в чудеса, потому что держу тебя за руку.»" },
+  { src: "assets/memory24.jpg", caption: "«Наши тени переплетаются лучше любых созвездий.»" },
+  { src: "assets/memory25.jpg", caption: "«Любовь — это когда в темноте видно больше.»" },
 ];
-const FEATURED_COUNT = Math.min(10, MEMORIES.length);
+const FEATURED_COUNT = Math.min(25, MEMORIES.length);
 
 // === ССЫЛКИ НА СЛОИ ===
 const intro = document.getElementById('intro');
@@ -29,11 +49,29 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const bg = document.getElementById('bg');
 const starsLayer = document.getElementById('stars-layer');
+const spaceWrapper = document.getElementById('space-wrapper');
+const space = document.getElementById('space');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
 const audioToggle = document.getElementById('audioToggle');
 
 const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+const SPACE_MULTIPLIER = 3.2;
+let spaceWidth = window.innerWidth;
+let spaceHeight = window.innerHeight;
+let viewX = 0;
+let viewY = 0;
+let maxViewX = 0;
+let maxViewY = 0;
+let viewInitialized = false;
+let panPointerId = null;
+let panStartX = 0;
+let panStartY = 0;
+let originViewX = 0;
+let originViewY = 0;
+let panMovedDuringGesture = false;
+let panJustHappened = false;
 
 // === ЭТАПЫ ИНТРО ===
 // Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
@@ -244,15 +282,119 @@ function mixColor(a,b,t){
 }
 
 // === НОЧНОЙ ФОН И ЗВЁЗДЫ (canvas+divs) ===
-const bgCtx = bg.getContext('2d');
+const bgCtx = bg ? bg.getContext('2d') : null;
 let W,H, starfield=[];
+
+function updateSpaceTransform(){
+  if (!space) return;
+  viewX = clamp(viewX, 0, maxViewX);
+  viewY = clamp(viewY, 0, maxViewY);
+  space.style.transform = `translate(${-viewX}px, ${-viewY}px)`;
+}
+
 function resize(){
-  const dpr = Math.min(2, window.devicePixelRatio||1);
-  W = bg.width = fx.width = Math.floor(innerWidth * dpr);
-  H = bg.height = fx.height = Math.floor(innerHeight * dpr);
-  bg.style.width = fx.style.width = innerWidth + 'px';
-  bg.style.height = fx.style.height = innerHeight + 'px';
+  const scale = Math.min(2, window.devicePixelRatio||1);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const prevMaxX = maxViewX;
+  const prevMaxY = maxViewY;
+  const prevWidth = spaceWidth;
+  const prevHeight = spaceHeight;
+
+  if (space){
+    const targetWidth = Math.max(vw * SPACE_MULTIPLIER, 1600);
+    const targetHeight = Math.max(vh * SPACE_MULTIPLIER, 1600);
+    spaceWidth = Math.max(targetWidth, prevWidth);
+    spaceHeight = Math.max(targetHeight, prevHeight);
+    space.style.width = `${spaceWidth}px`;
+    space.style.height = `${spaceHeight}px`;
+  } else {
+    spaceWidth = Math.max(vw, prevWidth);
+    spaceHeight = Math.max(vh, prevHeight);
+  }
+
+  maxViewX = Math.max(0, spaceWidth - vw);
+  maxViewY = Math.max(0, spaceHeight - vh);
+
+  if (!viewInitialized){
+    viewX = maxViewX / 2;
+    viewY = maxViewY / 2;
+    viewInitialized = true;
+  } else {
+    const fracX = prevMaxX > 0 ? viewX / prevMaxX : 0.5;
+    const fracY = prevMaxY > 0 ? viewY / prevMaxY : 0.5;
+    viewX = maxViewX > 0 ? fracX * maxViewX : 0;
+    viewY = maxViewY > 0 ? fracY * maxViewY : 0;
+  }
+
+  if (bg){
+    W = Math.floor(spaceWidth * scale);
+    H = Math.floor(spaceHeight * scale);
+    if (bg.width !== W) bg.width = W;
+    if (bg.height !== H) bg.height = H;
+    bg.style.width = `${spaceWidth}px`;
+    bg.style.height = `${spaceHeight}px`;
+  }
+
+  if (fx){
+    const fw = Math.floor(vw * scale);
+    const fh = Math.floor(vh * scale);
+    if (fx.width !== fw) fx.width = fw;
+    if (fx.height !== fh) fx.height = fh;
+    fx.style.width = `${vw}px`;
+    fx.style.height = `${vh}px`;
+  }
+
+  updateSpaceTransform();
   genStarfield();
+}
+
+function handlePanPointerDown(e){
+  if (!spaceWrapper) return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  panPointerId = e.pointerId;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  originViewX = viewX;
+  originViewY = viewY;
+  panMovedDuringGesture = false;
+}
+
+function handlePanPointerMove(e){
+  if (panPointerId === null || e.pointerId !== panPointerId) return;
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  if (!panMovedDuringGesture && Math.hypot(dx, dy) > 6){
+    panMovedDuringGesture = true;
+    if (spaceWrapper){
+      spaceWrapper.classList.add('panning');
+      if (typeof spaceWrapper.setPointerCapture === 'function'){
+        spaceWrapper.setPointerCapture(panPointerId);
+      }
+    }
+  }
+  if (!panMovedDuringGesture) return;
+  viewX = originViewX - dx;
+  viewY = originViewY - dy;
+  updateSpaceTransform();
+}
+
+function handlePanPointerUp(e){
+  if (panPointerId === null || (e && e.pointerId !== panPointerId)) return;
+  if (spaceWrapper){
+    spaceWrapper.classList.remove('panning');
+    if (typeof spaceWrapper.releasePointerCapture === 'function'){
+      if (!spaceWrapper.hasPointerCapture || spaceWrapper.hasPointerCapture(panPointerId)){
+        spaceWrapper.releasePointerCapture(panPointerId);
+      }
+    }
+  }
+  if (panMovedDuringGesture){
+    panJustHappened = true;
+    requestAnimationFrame(() => { panJustHappened = false; });
+  }
+  panPointerId = null;
+  panMovedDuringGesture = false;
 }
 function genStarfield(){
   const layers = [
@@ -277,6 +419,7 @@ function genStarfield(){
 }
 let t0 = performance.now();
 function renderBackground(t){
+  if (!bgCtx) return;
   const dt = (t - t0)/1000; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
@@ -304,40 +447,58 @@ function renderBackground(t){
 
 // Кликабельные звезды
 function placeFeaturedStars(){
+  if (!starsLayer) return;
   starsLayer.innerHTML = '';
   starsLayer.style.pointerEvents = 'none';
   const used = [];
   const count = FEATURED_COUNT;
+  const width = spaceWidth || window.innerWidth;
+  const height = spaceHeight || window.innerHeight;
+  const marginX = Math.min(240, width * 0.18);
+  const marginY = Math.min(240, height * 0.18);
 
   for(let i=0;i<count;i++){
     const star = document.createElement('button');
     star.className = 'star';
     const size = 10 + Math.random()*10;
-    const x = 10 + Math.random()*80;
-    const y = 14 + Math.random()*66;
-    star.style.setProperty('--size', `${size}px`);
-    star.style.setProperty('--x', `${x}%`);
-    star.style.setProperty('--y', `${y}%`);
-    star.style.setProperty('--tw', `${2 + Math.random()*1.8}s`);
-
-    // коллизии
-    let ok = true;
-    for (const p of used) if (Math.hypot(p.x-x, p.y-y) < 10) { ok=false; break; }
-    if (!ok){ i--; continue; }
+    let x = 0;
+    let y = 0;
+    let attempts = 0;
+    const maxAttempts = 80;
+    while (attempts < maxAttempts){
+      x = rand(marginX, width - marginX);
+      y = rand(marginY, height - marginY);
+      let ok = true;
+      for (const p of used) {
+        if (Math.hypot(p.x - x, p.y - y) < 140) { ok = false; break; }
+      }
+      if (ok) break;
+      attempts++;
+    }
     used.push({x,y});
+    star.style.setProperty('--size', `${size}px`);
+    star.style.setProperty('--x', `${x}px`);
+    star.style.setProperty('--y', `${y}px`);
+    star.style.setProperty('--tw', `${2 + Math.random()*1.8}s`);
 
     const mem = MEMORIES[i % MEMORIES.length];
     star.dataset.src = mem.src;
     star.dataset.caption = mem.caption;
 
     const open = (clientX, clientY)=>{
+      star.classList.add('visited');
+      const rect = star.getBoundingClientRect();
+      const hasCoords = Number.isFinite(clientX) && Number.isFinite(clientY);
+      const sparkleX = hasCoords ? clientX : rect.left + rect.width / 2;
+      const sparkleY = hasCoords ? clientY : rect.top + rect.height / 2;
       openMemory(mem.src, mem.caption);
-      sparkle(clientX, clientY);
+      sparkle(sparkleX, sparkleY);
     };
-    star.addEventListener('click', e => open(e.clientX, e.clientY));
-    star.addEventListener('touchstart', e => {
-      const t = e.touches[0]; open(t.clientX, t.clientY);
-    }, {passive:true});
+    star.addEventListener('click', e => {
+      if (panJustHappened) return;
+      const isKeyboard = e.detail === 0;
+      open(isKeyboard ? undefined : e.clientX, isKeyboard ? undefined : e.clientY);
+    });
 
     starsLayer.appendChild(star);
   }
@@ -359,9 +520,10 @@ closeBtn.addEventListener('click', closeMemory);
 memoryEl.addEventListener('click', e => { if (e.target === memoryEl) closeMemory(); });
 
 // Блёстки
-const fxCtx = fx.getContext('2d');
+const fxCtx = fx ? fx.getContext('2d') : null;
 let particles = [];
 function sparkle(x,y){
+  if (!fx || !fxCtx) return;
   const rect = fx.getBoundingClientRect();
   const px = (x - rect.left) * dpr;
   const py = (y - rect.top) * dpr;
@@ -377,6 +539,7 @@ function sparkle(x,y){
 }
 let lastFx = performance.now();
 function renderFx(t){
+  if (!fxCtx) return;
   const dt = Math.min(0.033, (t - lastFx)/1000);
   lastFx = t;
   fxCtx.clearRect(0,0,fx.width,fx.height);
@@ -519,6 +682,13 @@ document.addEventListener('keydown', (event) => {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
   startAmbient(true);
 }, { once: true });
+
+if (spaceWrapper){
+  spaceWrapper.addEventListener('pointerdown', handlePanPointerDown);
+  spaceWrapper.addEventListener('pointermove', handlePanPointerMove);
+  spaceWrapper.addEventListener('pointerup', handlePanPointerUp);
+  spaceWrapper.addEventListener('pointercancel', handlePanPointerUp);
+}
 
 // Инициализация после завершения интро
 function initBackground(){
