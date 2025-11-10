@@ -73,9 +73,9 @@ const SKY = {
 };
 
 const HORIZON = {
-  top: { dusk: '#f9c989', night: '#17233d' },
-  mid: { dusk: '#644173', night: '#0f192c' },
-  botOpacity: { dusk: 0.2, night: 0 },
+  top: { dusk: '#f3c27f', night: '#162339' },
+  mid: { dusk: '#6b4c7c', night: '#0d192c' },
+  botOpacity: { dusk: 0.24, night: 0 },
 };
 
 function animateIntro(ts){

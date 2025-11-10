@@ -19,27 +19,27 @@
         </linearGradient>
 
         <linearGradient id="duneGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#242f47" />
-          <stop offset="60%" stop-color="#1a2338" />
-          <stop offset="100%" stop-color="#111829" />
+          <stop offset="0%" stop-color="#202c46" />
+          <stop offset="60%" stop-color="#141e33" />
+          <stop offset="100%" stop-color="#0d1525" />
         </linearGradient>
 
         <linearGradient id="hillGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#141d30" />
-          <stop offset="50%" stop-color="#101828" />
-          <stop offset="100%" stop-color="#0c1421" />
+          <stop offset="0%" stop-color="#131c2c" />
+          <stop offset="45%" stop-color="#0f1927" />
+          <stop offset="100%" stop-color="#0a1220" />
         </linearGradient>
 
         <!-- Сумеречное свечение у горизонта -->
         <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="horizonTop" offset="0%" stop-color="#f9c989" stop-opacity="0.94" />
-          <stop id="horizonMid" offset="50%" stop-color="#644173" stop-opacity="0.52" />
-          <stop id="horizonBot" offset="100%" stop-color="#0a0e14" stop-opacity="0" />
+          <stop id="horizonTop" offset="0%" stop-color="#f3c27f" stop-opacity="0.92" />
+          <stop id="horizonMid" offset="55%" stop-color="#6b4c7c" stop-opacity="0.48" />
+          <stop id="horizonBot" offset="100%" stop-color="#08101c" stop-opacity="0" />
         </linearGradient>
 
         <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0b111d" />
-          <stop offset="100%" stop-color="#050b16" />
+          <stop offset="0%" stop-color="#131b2a" />
+          <stop offset="100%" stop-color="#060b16" />
         </linearGradient>
 
         <!-- Солнечный диск с мягким свечением -->
@@ -86,12 +86,12 @@
 
         <!-- Земля/горизонт -->
         <g id="ground">
-          <rect x="0" y="600" width="390" height="244" fill="url(#groundGrad)"/>
-          <path id="horizonGlow" d="M0,622 q72,-34 142,-20 q58,12 120,-6 q60,-18 128,26 l0,222 H0 Z" fill="url(#horizonGrad)" opacity="0.9"/>
+          <path id="groundBase" d="M-18,656 C 60,610 156,598 254,618 C 318,631 374,658 404,690 V844 H-18 Z" fill="url(#groundGrad)"/>
+          <path id="horizonGlow" d="M-24,606 C 60,568 174,562 288,580 C 342,589 382,606 410,632 V752 H-24 Z" fill="url(#horizonGrad)" opacity="0.92"/>
           <!-- Дальний горизонт (силуэты холмов) -->
-          <path d="M-30,644 q60,-28 120,-14 q46,12 90,2 q52,-12 106,12 q42,16 116,-2 v202 H-30 Z"
+          <path d="M-36,664 C 42,620 148,606 240,620 C 314,632 370,656 414,694 V844 H-36 Z"
                 fill="url(#duneGrad)"/>
-          <path d="M-24,688 q72,-36 140,-18 q48,12 100,8 q52,-8 124,24 V844 H-24 Z" fill="url(#hillGrad)"/>
+          <path d="M-30,710 C 52,662 168,654 272,680 C 332,696 394,722 424,760 V844 H-30 Z" fill="url(#hillGrad)"/>
         </g>
 
         <!-- Текст-приглашение -->
