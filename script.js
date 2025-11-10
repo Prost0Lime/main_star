@@ -10,6 +10,7 @@ const FEATURED_COUNT = Math.min(10, MEMORIES.length);
 
 // === ССЫЛКИ НА СЛОИ ===
 const intro = document.getElementById('intro');
+const scene = document.getElementById('scene');
 const skyTop = document.getElementById('skyTop');
 const skyMid = document.getElementById('skyMid');
 const skyBot = document.getElementById('skyBot');
@@ -19,13 +20,12 @@ const horizonBot = document.getElementById('horizonBot');
 const sunGroup = document.getElementById('sunGroup');
 const sun = document.getElementById('sun');
 const clouds = document.getElementById('clouds');
-const lampLight = document.getElementById('lampLight');
-const bulb = document.getElementById('bulb');
-const lampGround = document.getElementById('lampGround');
 const horizonGlow = document.getElementById('horizonGlow');
 const introStarsGroup = document.getElementById('introStars');
 const introStarDots = introStarsGroup ? Array.from(introStarsGroup.querySelectorAll('circle')) : [];
 const introText = document.getElementById('introText');
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const bg = document.getElementById('bg');
 const starsLayer = document.getElementById('stars-layer');
@@ -35,24 +35,30 @@ const hint = document.getElementById('hint');
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
 // === ЭТАПЫ ИНТРО ===
-// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
+// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды
 const INTRO = {
-  SUNSET_DURATION: 6.0,
-  BLUE_HOUR: 3.0,
-  NIGHT_FALL: 3.5,
-  STARS_DELAY: 0.8,
-  STARS_FADE: 3.0,
-  LAMP_DELAY: 0.5,
-  LAMP_FADE: 2.2,
-  HOLD: 1.2,
+  SUNSET_DURATION: 5,
+  BLUE_HOUR: 1.8,
+  NIGHT_FALL: 0.5,
+  STARS_DELAY: 0,
+  STARS_FADE: 0,
+  HOLD: 2,
+};
+
+const CAMERA = {
+  START_OFFSET: 0.62,
+  DURATION: 3.4,
+  LIFT: 360,
+  SCALE: 1.12,
 };
 
 INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
-const finaleTail = Math.max(INTRO.STARS_DELAY + INTRO.STARS_FADE, INTRO.LAMP_DELAY + INTRO.LAMP_FADE);
+const finaleTail = INTRO.STARS_DELAY + INTRO.STARS_FADE;
 INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.HOLD;
 
 let startTime = null;
 let introFinished = false;
+let backgroundStarted = false;
 
 function lerp(a,b,t){ return a + (b-a)*t; }
 function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
@@ -62,21 +68,45 @@ function easeInOutCubic(x){
 function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
 function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
 
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function initClouds(){
+  if (!clouds) return;
+  while (clouds.firstChild) clouds.removeChild(clouds.firstChild);
+  const clusterCount = Math.floor(rand(3, 6));
+  for (let i = 0; i < clusterCount; i++) {
+    const group = document.createElementNS(SVG_NS, 'g');
+    const baseX = rand(-40, 260);
+    const baseY = rand(230, 320);
+    const scale = rand(0.55, 0.9);
+    group.setAttribute('transform', `translate(${baseX.toFixed(1)} ${baseY.toFixed(1)}) scale(${scale.toFixed(3)})`);
+    const partCount = Math.floor(rand(3, 6));
+    for (let p = 0; p < partCount; p++) {
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', rand(-42, 46).toFixed(1));
+      circle.setAttribute('cy', rand(-18, 18).toFixed(1));
+      circle.setAttribute('r', rand(16, 34).toFixed(1));
+      const opacity = (0.68 + Math.random() * 0.24).toFixed(2);
+      circle.setAttribute('fill', '#f6f8ff');
+      circle.setAttribute('fill-opacity', opacity);
+      group.appendChild(circle);
+    }
+    clouds.appendChild(group);
+  }
+}
+
 const SKY = {
-  top: { day: '#304b7a', dusk: '#1f2a4e', night: '#05070b' },
-  mid: { day: '#8aa1d1', dusk: '#2f3d68', night: '#0b1527' },
-  bot: { day: '#f2b36a', dusk: '#52386d', night: '#05070b' },
+  top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
+  mid: { day: '#9ab6e6', dusk: '#465c87', night: '#081327' },
+  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0b1a2e' },
 };
 
 const HORIZON = {
-  top: { dusk: '#f7c27b', night: '#213052' },
-  mid: { dusk: '#563564', night: '#151f34' },
-  botOpacity: { dusk: 0.25, night: 0 },
-};
-
-const LAMP = {
-  bulbOff: '#2a2f3a',
-  bulbOn: '#ffc66e',
+  top: { dusk: '#f3c27f', night: '#162339' },
+  mid: { dusk: '#6b4c7c', night: '#0d192c' },
+  botOpacity: { dusk: 0.24, night: 0 },
 };
 
 function animateIntro(ts){
@@ -88,6 +118,10 @@ function animateIntro(ts){
   const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
   const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
 
+  if (!backgroundStarted && nightProgress > 0.2) {
+    initBackground();
+  }
+
   const stageTop = mixColor(SKY.top.day, SKY.top.dusk, sunsetProgress);
   const stageMid = mixColor(SKY.mid.day, SKY.mid.dusk, sunsetProgress);
   const stageBot = mixColor(SKY.bot.day, SKY.bot.dusk, sunsetProgress);
@@ -96,12 +130,13 @@ function animateIntro(ts){
   skyMid.setAttribute('stop-color', mixColor(stageMid, SKY.mid.night, twilightProgress));
   skyBot.setAttribute('stop-color', mixColor(stageBot, SKY.bot.night, twilightProgress));
 
-  horizonTop.setAttribute('stop-color', mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress));
-  horizonTop.setAttribute('stop-opacity', (0.95 * (1 - twilightProgress * 0.75)).toFixed(3));
+  const horizonTopColor = mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress);
+  horizonTop.setAttribute('stop-color', horizonTopColor);
+  horizonTop.setAttribute('stop-opacity', (0.94 * (1 - twilightProgress * 0.7)).toFixed(3));
   horizonMid.setAttribute('stop-color', mixColor(HORIZON.mid.dusk, HORIZON.mid.night, twilightProgress));
-  horizonMid.setAttribute('stop-opacity', (0.55 * (1 - twilightProgress * 0.9)).toFixed(3));
+  horizonMid.setAttribute('stop-opacity', (0.52 * (1 - twilightProgress * 0.88)).toFixed(3));
   horizonBot.setAttribute('stop-opacity', (HORIZON.botOpacity.dusk * (1 - twilightProgress)).toFixed(3));
-  horizonGlow.setAttribute('opacity', (0.9 * (1 - twilightProgress) * (1 - nightProgress * 0.85)).toFixed(3));
+  horizonGlow.setAttribute('opacity', (0.92 * (1 - twilightProgress) * (1 - nightProgress * 0.8)).toFixed(3));
 
   const sunY = lerp(560, 720, sunsetProgress);
   const sunScale = lerp(1, 0.78, sunsetProgress);
@@ -116,13 +151,15 @@ function animateIntro(ts){
   const textOpacity = Math.max(0, 0.95 * (1 - sunsetProgress * 1.1));
   introText.setAttribute('opacity', textOpacity.toFixed(3));
 
-  const lampStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.LAMP_DELAY;
-  const lampProgress = easeInOutCubic(clamp((t - lampStart) / INTRO.LAMP_FADE, 0, 1));
-  lampLight.setAttribute('opacity', lampProgress.toFixed(3));
-  bulb.setAttribute('fill', mixColor(LAMP.bulbOff, LAMP.bulbOn, lampProgress));
-  if (lampGround) {
-    lampGround.setAttribute('opacity', (0.7 * lampProgress).toFixed(3));
+  const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
+  const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
+  if (scene) {
+    const lift = lerp(0, CAMERA.LIFT, cameraProgress);
+    const scale = lerp(1, CAMERA.SCALE, cameraProgress);
+    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
   }
+  const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
+  intro.style.opacity = (1 - fadeBlend).toFixed(3);
 
   if (introStarsGroup) {
     const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
@@ -137,11 +174,6 @@ function animateIntro(ts){
   }
 
   if (t >= INTRO.TOTAL) {
-    lampLight.setAttribute('opacity', '1');
-    bulb.setAttribute('fill', LAMP.bulbOn);
-    if (lampGround) {
-      lampGround.setAttribute('opacity', '0.7');
-    }
     endIntro();
     return;
   }
@@ -151,6 +183,7 @@ function animateIntro(ts){
 
 function endIntro(){
   introFinished = true;
+  intro.style.opacity = '0';
   intro.classList.add('hidden');
   // Запуск ночного фона и звёзд
   initBackground();
@@ -215,12 +248,13 @@ function genStarfield(){
 }
 let t0 = performance.now();
 function renderBackground(t){
-  const dt = (t - t0)/1000; t0 = t;
+  const dt = (t - t0)/100; t0 = t;
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
-  const g = bgCtx.createRadialGradient(W*0.5,H*0.9,Math.min(W,H)*0.05, W*0.5,H*0.5, Math.max(W,H)*0.7);
-  g.addColorStop(0,'#091221');
-  g.addColorStop(1,'#000000');
+  const g = bgCtx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#050b16');
+  g.addColorStop(0.55, '#081327');
+  g.addColorStop(1, '#0b1a2e');
   bgCtx.fillStyle = g;
   bgCtx.fillRect(0,0,W,H);
 
@@ -334,6 +368,8 @@ function renderFx(t){
 
 // Инициализация после завершения интро
 function initBackground(){
+  if (backgroundStarted) return;
+  backgroundStarted = true;
   window.addEventListener('resize', resize, {passive:true});
   resize();
   requestAnimationFrame(renderBackground);
@@ -341,6 +377,7 @@ function initBackground(){
 }
 
 // Старт анимации интро
+initClouds();
 requestAnimationFrame(animateIntro);
 
 // Предзагрузка изображений
