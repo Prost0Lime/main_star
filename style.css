@@ -1,66 +1,29 @@
-body {
-  margin: 0;
-  overflow: hidden;
-  background: radial-gradient(ellipse at bottom, #0d1b2a, #000);
-  height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
-  color: #fff;
-  text-align: center;
-}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;overflow:hidden}
+#app{position:relative;width:100vw;height:100vh}
 
-#sky {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
+/* INTRO */
+#intro{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:5;transition:opacity .8s ease}
+#intro.hidden{opacity:0;pointer-events:none}
+#intro #sunGroup{transform-origin:195px 560px} /* pivot для анимации солнца */
 
-#star {
-  position: absolute;
-  width: 32px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  animation: glow 2s infinite ease-in-out;
-  image-rendering: -webkit-optimize-contrast;
-}
+/* Пост-интро слои */
+#bg,#fx{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
+#stars-layer{position:absolute;inset:0;pointer-events:none;z-index:2}
+.star{position:absolute;width:var(--size,10px);height:var(--size,10px);left:var(--x,50%);top:var(--y,50%);transform:translate(-50%,-50%);pointer-events:auto;border-radius:50%;background:radial-gradient(circle,#fff 0%,#fff8 50%,#fff0 70%);filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 16px rgba(180,200,255,.7));animation:twinkle var(--tw,2.6s) ease-in-out infinite;cursor:pointer}
+.star::after{content:'';position:absolute;inset:-12px;background:radial-gradient(circle,rgba(235,245,255,.22),transparent 60%);border-radius:50%;animation:pulse var(--tw,2.6s) ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.65;scale:1}50%{opacity:1;scale:1.35}} @keyframes pulse{0%,100%{opacity:.15}50%{opacity:.45}}
 
-@keyframes glow {
-  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
-}
+/* Модалка */
+#memory{position:absolute;inset:0;display:grid;place-items:center;backdrop-filter:blur(12px) saturate(115%);background:radial-gradient(1200px 800px at 50% 50%,rgba(24,34,56,.55),rgba(0,0,0,.75));transition:opacity .5s ease;z-index:10}
+#memory.hidden{opacity:0;pointer-events:none}
+.memory-frame{position:relative;max-width:min(92vw,720px);width:92vw;border-radius:20px;overflow:clip;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.16);box-shadow:0 18px 60px rgba(0,0,0,.55),0 0 80px rgba(160,200,255,.25) inset;animation:cardIn 520ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.memory-frame img{width:100%;display:block;aspect-ratio:4/5;object-fit:cover;filter:contrast(1.05) saturate(1.02)}
+.caption{padding:12px 16px 16px;font-size:14px;color:#e8efff;text-align:center;text-wrap:balance;background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+.close{position:absolute;top:10px;right:10px;appearance:none;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;color:#dfe8ff;background:rgba(10,16,28,.55);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px);cursor:pointer;transition:transform .15s ease, background .2s}
+.close:active{transform:scale(.96)}
 
-#memory {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.9);
-  transition: opacity 0.8s;
-}
-
-#memory.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#memory img {
-  width: 80%;
-  max-width: 360px;
-  border-radius: 16px;
-  box-shadow: 0 0 12px rgba(255,255,255,0.3);
-  margin-bottom: 1rem;
-}
-
-button {
-  background: none;
-  border: 1px solid #fff;
-  color: #fff;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
+/* Подсказка */
+#hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;font-size:14px;color:#e8edff;background:rgba(12,18,30,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:6;opacity:0;transition:opacity .6s ease}
+#hint.show{opacity:1}

@@ -2,19 +2,118 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stella</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Main Star</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="sky">
-    <img src="assets/star.png" id="star" alt="звезда" />
-  </div>
+  <div id="app">
+    <!-- INTRO: Сцена заката → ночь -->
+    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" role="img" aria-label="вечерний горизонт">
+      <defs>
+        <!-- Небо: градиент от вечера к ночи (анимируется классами) -->
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop id="skyTop" offset="0%" stop-color="#304b7a"/>
+          <stop id="skyMid" offset="60%" stop-color="#8aa1d1"/>
+          <stop id="skyBot" offset="100%" stop-color="#f2b36a"/>
+        </linearGradient>
 
-  <div id="memory" class="hidden">
-    <img src="assets/memory.jpg" alt="воспоминание" />
-    <p>«Помнишь тот вечер, когда небо было таким же ясным?»</p>
-    <button id="back">вернуться в небо</button>
+        <!-- Солнечный диск с мягким свечением -->
+        <radialGradient id="sunGrad" r="60%" cx="50%" cy="50%">
+          <stop offset="0%" stop-color="#fff6c0" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#ffd27a" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#ff9a3c" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- Ламповый тёплый свет фонаря -->
+        <radialGradient id="lampGlow" cx="50%" cy="0%" r="100%">
+          <stop offset="0%" stop-color="rgba(255,213,120,0.85)"/>
+          <stop offset="60%" stop-color="rgba(255,190,90,0.35)"/>
+          <stop offset="100%" stop-color="rgba(255,170,60,0)"/>
+        </radialGradient>
+
+        <!-- Туман/световой конус от фонаря -->
+        <linearGradient id="lampCone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(255,210,120,0.35)"/>
+          <stop offset="100%" stop-color="rgba(255,210,120,0)"/>
+        </linearGradient>
+
+        <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3"/>
+        </filter>
+      </defs>
+
+      <!-- Небо -->
+      <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
+
+      <!-- Солнце -->
+      <g id="sunGroup">
+        <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
+      </g>
+
+      <!-- Тучки -->
+      <g id="clouds" fill="#ffffff" opacity="0.9" filter="url(#softBlur)">
+        <path d="M-80,220 q40,-20 80,0 q30,-30 65,0 q28,-25 56,0 q45,-18 90,0 q40,28 -20,40 q-40,8 -120,8 q-100,0 -130,-10 q-60,-12 -21,-38z"/>
+        <path d="M-60,300 q50,-18 90,0 q40,-24 70,0 q35,-26 70,0 q55,-18 120,0 q40,26 -15,40 q-50,10 -140,10 q-120,0 -150,-12 q-70,-14 -25,-38z"/>
+      </g>
+
+      <!-- Земля/горизонт -->
+      <g id="ground">
+        <rect x="0" y="640" width="390" height="204" fill="#0a0e14"/>
+        <!-- Дальний горизонт (силуэты холмов) -->
+        <path d="M0,640 q60,-18 120,-6 q40,10 80,0 q40,-10 80,6 q30,10 110,0 L390,844 L0,844 Z"
+              fill="#0e1622"/>
+      </g>
+
+      <!-- Фонарь -->
+      <g id="lamp" transform="translate(300,640)">
+        <!-- Столб -->
+        <rect x="-3" y="-130" width="6" height="140" fill="#1c2534"/>
+        <!-- Плафон -->
+        <rect x="-12" y="-140" width="24" height="14" rx="4" ry="4" fill="#1c2534"/>
+        <rect id="bulb" x="-6" y="-137" width="12" height="10" rx="3" ry="3" fill="#2a2f3a"/>
+        <!-- Тёплая засветка (включается ночью) -->
+        <g id="lampLight" opacity="0">
+          <circle cx="0" cy="-132" r="22" fill="url(#lampGlow)" />
+          <path d="M-50,-125 L50,-125 L80,30 L-80,30 Z" fill="url(#lampCone)"/>
+        </g>
+      </g>
+
+      <!-- Мальчик (силуэт) -->
+      <g id="boy" transform="translate(110,640)" fill="#0a0f18">
+        <path d="M0,0 q12,-24 24,0 v16 h-24z"/> <!-- тень под ноги -->
+        <path d="M12,-68 q-8,10 -6,24 q2,16 14,24 q4,2 8,0 q14,-8 16,-24 q2,-14 -6,-24 q-8,-10 -18,-10 q-10,0 -8,10z" fill="#121a25"/> <!-- голова/шапка -->
+        <path d="M4,-52 q-6,12 -6,28 v36 h34 v-36 q0,-16 -8,-28 q-6,-10 -20,0z" fill="#121a25"/> <!-- корпус -->
+        <path d="M6,12 v-24 h6 v24z" /> <!-- нога -->
+        <path d="M22,12 v-24 h6 v24z" /> <!-- нога -->
+        <path d="M-4,-44 q10,6 14,10 q4,6 2,12 q-6,6 -14,0 q-8,-6 -10,-12 q-2,-10 8,-10z" /> <!-- рука -->
+      </g>
+
+      <!-- Текст-приглашение -->
+      <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
+            style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
+        Смотри, как день становится ночью…
+      </text>
+    </svg>
+
+    <!-- После интро: фоновой канвас со звёздами и слой звёзд -->
+    <canvas id="bg"></canvas>
+    <div id="stars-layer" aria-label="звёзды"></div>
+
+    <!-- Модалка воспоминания -->
+    <div id="memory" class="hidden" role="dialog" aria-modal="true">
+      <div class="memory-frame">
+        <button class="close" id="closeBtn" aria-label="Закрыть">✕</button>
+        <img id="memoryImg" alt="воспоминание" />
+        <div class="caption" id="caption"></div>
+      </div>
+    </div>
+
+    <!-- Эффекты блёсток -->
+    <canvas id="fx"></canvas>
+
+    <!-- Подсказка -->
+    <div id="hint" class="hidden">Найди и коснись мерцающих звёзд ✨</div>
   </div>
 
   <script src="script.js"></script>
