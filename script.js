@@ -31,6 +31,7 @@ const bg = document.getElementById('bg');
 const starsLayer = document.getElementById('stars-layer');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
+const audioToggle = document.getElementById('audioToggle');
 
 const dpr = Math.min(2, window.devicePixelRatio || 1);
 
@@ -393,6 +394,209 @@ function renderFx(t){
   }
   requestAnimationFrame(renderFx);
 }
+
+// === Аудио-эмбиент ===
+const ambient = {
+  ctx: null,
+  master: null,
+  shimmerTimer: null,
+  shimmerBus: null,
+  active: false,
+  spawnShimmer: null,
+};
+
+function ensureAmbient(){
+  if (ambient.ctx) return ambient;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+
+  const ctx = new AudioCtx();
+  const master = ctx.createGain();
+  master.gain.value = 0.0001;
+  master.connect(ctx.destination);
+
+  const padBus = ctx.createGain();
+  const padFilter = ctx.createBiquadFilter();
+  padFilter.type = 'lowpass';
+  padFilter.frequency.value = 900;
+  padFilter.Q.value = 0.8;
+  padBus.connect(padFilter);
+  padFilter.connect(master);
+
+  const padNotes = [
+    { freq: 196.0, detune: -6, lfo: 0.028 },
+    { freq: 246.94, detune: 4, lfo: 0.036 },
+    { freq: 293.66, detune: -2, lfo: 0.044 },
+  ];
+  const padVoices = [];
+  for (const note of padNotes) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = note.freq;
+    osc.detune.value = note.detune;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.18;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = note.lfo;
+    const lfoDepth = ctx.createGain();
+    lfoDepth.gain.value = 0.08;
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(gain.gain);
+
+    osc.connect(gain);
+    gain.connect(padBus);
+
+    osc.start();
+    lfo.start();
+    padVoices.push({ osc, lfo, gain, lfoDepth });
+  }
+
+  const shimmerBus = ctx.createGain();
+  shimmerBus.gain.value = 0.16;
+
+  const shimmerFilter = ctx.createBiquadFilter();
+  shimmerFilter.type = 'bandpass';
+  shimmerFilter.frequency.value = 1200;
+  shimmerFilter.Q.value = 1.4;
+  shimmerBus.connect(shimmerFilter);
+  shimmerFilter.connect(master);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.012;
+  noiseGain.connect(master);
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'lowpass';
+  noiseFilter.frequency.value = 650;
+  noiseFilter.Q.value = 0.9;
+  noiseFilter.connect(noiseGain);
+
+  const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.22;
+  }
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+  noiseSource.connect(noiseFilter);
+  noiseSource.start();
+
+  ambient.ctx = ctx;
+  ambient.master = master;
+  ambient.shimmerBus = shimmerBus;
+  ambient.padVoices = padVoices;
+  ambient.noiseSource = noiseSource;
+
+  ambient.spawnShimmer = function spawnShimmer(){
+    const now = ctx.currentTime + 0.05;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const freq = 660 + Math.random() * 280;
+    osc.frequency.setValueAtTime(freq, now);
+    osc.detune.setValueAtTime(Math.random() * 40 - 20, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    const rise = now + 0.6 + Math.random() * 0.4;
+    const fall = rise + 2.8;
+    gain.gain.linearRampToValueAtTime(0.018, rise);
+    gain.gain.exponentialRampToValueAtTime(0.0001, fall);
+
+    osc.connect(gain);
+    gain.connect(shimmerBus);
+
+    osc.start(now);
+    osc.stop(fall + 0.8);
+  };
+
+  ambient.queueShimmer = function queueShimmer(){
+    if (!ambient.ctx) return;
+    const delay = 5200 + Math.random() * 4200;
+    ambient.shimmerTimer = setTimeout(() => {
+      if (!ambient.ctx || !ambient.active) {
+        ambient.shimmerTimer = null;
+        return;
+      }
+      ambient.spawnShimmer();
+      ambient.queueShimmer();
+    }, delay);
+  };
+
+  return ambient;
+}
+
+function updateAudioToggle(){
+  if (!audioToggle) return;
+  audioToggle.textContent = ambient.active ? '🔊' : '🔈';
+  audioToggle.classList.toggle('on', ambient.active);
+  audioToggle.setAttribute('aria-pressed', ambient.active ? 'true' : 'false');
+  audioToggle.setAttribute('aria-label', ambient.active ? 'Выключить атмосферный звук' : 'Включить атмосферный звук');
+}
+
+function startAmbient(auto = false){
+  const state = ensureAmbient();
+  if (!state) {
+    if (audioToggle) audioToggle.style.display = 'none';
+    return;
+  }
+  const resume = state.ctx.resume();
+  if (resume && typeof resume.then === 'function') {
+    resume.catch(()=>{});
+  }
+  const now = state.ctx.currentTime;
+  const target = auto ? 0.28 : 0.36;
+  state.master.gain.cancelScheduledValues(now);
+  state.master.gain.setValueAtTime(Math.max(state.master.gain.value, 0.0001), now);
+  state.master.gain.linearRampToValueAtTime(target, now + 3.2);
+  state.active = true;
+  if (!state.shimmerTimer) {
+    state.spawnShimmer();
+    state.queueShimmer();
+  }
+  updateAudioToggle();
+}
+
+function stopAmbient(){
+  if (!ambient.ctx || !ambient.active) return;
+  const now = ambient.ctx.currentTime;
+  ambient.master.gain.cancelScheduledValues(now);
+  ambient.master.gain.setValueAtTime(Math.max(ambient.master.gain.value, 0.0001), now);
+  ambient.master.gain.linearRampToValueAtTime(0.0001, now + 2.4);
+  if (ambient.shimmerTimer) {
+    clearTimeout(ambient.shimmerTimer);
+    ambient.shimmerTimer = null;
+  }
+  ambient.active = false;
+  updateAudioToggle();
+}
+
+function toggleAmbient(){
+  if (ambient.active) stopAmbient(); else startAmbient();
+}
+
+if (audioToggle){
+  audioToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleAmbient();
+  });
+  updateAudioToggle();
+}
+
+function handleFirstInteraction(event){
+  if (ambient.active) return;
+  if (audioToggle && audioToggle.contains(event.target)) return;
+  startAmbient(true);
+}
+
+document.addEventListener('pointerdown', handleFirstInteraction, { once: true });
+document.addEventListener('keydown', (event) => {
+  if (ambient.active) return;
+  const tag = event.target && event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+  startAmbient(true);
+}, { once: true });
 
 // Инициализация после завершения интро
 function initBackground(){
