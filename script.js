@@ -397,134 +397,61 @@ function renderFx(t){
 
 // === Аудио-эмбиент ===
 const ambient = {
-  ctx: null,
-  master: null,
-  shimmerTimer: null,
-  shimmerBus: null,
+  audio: null,
   active: false,
-  spawnShimmer: null,
+  fadeHandle: null,
 };
 
 function ensureAmbient(){
-  if (ambient.ctx) return ambient;
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return null;
+  if (ambient.audio) return ambient;
 
-  const ctx = new AudioCtx();
-  const master = ctx.createGain();
-  master.gain.value = 0.0001;
-  master.connect(ctx.destination);
-
-  const padBus = ctx.createGain();
-  const padFilter = ctx.createBiquadFilter();
-  padFilter.type = 'lowpass';
-  padFilter.frequency.value = 900;
-  padFilter.Q.value = 0.8;
-  padBus.connect(padFilter);
-  padFilter.connect(master);
-
-  const padNotes = [
-    { freq: 196.0, detune: -6, lfo: 0.028 },
-    { freq: 246.94, detune: 4, lfo: 0.036 },
-    { freq: 293.66, detune: -2, lfo: 0.044 },
-  ];
-  const padVoices = [];
-  for (const note of padNotes) {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = note.freq;
-    osc.detune.value = note.detune;
-
-    const gain = ctx.createGain();
-    gain.gain.value = 0.18;
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = note.lfo;
-    const lfoDepth = ctx.createGain();
-    lfoDepth.gain.value = 0.08;
-    lfo.connect(lfoDepth);
-    lfoDepth.connect(gain.gain);
-
-    osc.connect(gain);
-    gain.connect(padBus);
-
-    osc.start();
-    lfo.start();
-    padVoices.push({ osc, lfo, gain, lfoDepth });
+  const probe = document.createElement('audio');
+  if (!probe || typeof probe.canPlayType !== 'function' || probe.canPlayType('audio/mpeg') === '') {
+    return null;
   }
 
-  const shimmerBus = ctx.createGain();
-  shimmerBus.gain.value = 0.16;
+  const audio = new Audio();
+  audio.src = 'assets/ambient.mp3'; // замените файлом с атмосферой
+  audio.loop = true;
+  audio.preload = 'auto';
+  audio.volume = 0;
+  audio.setAttribute('aria-hidden', 'true');
+  audio.style.display = 'none';
+  audio.addEventListener('error', () => {
+    if (audioToggle) audioToggle.style.display = 'none';
+  }, { once: true });
+  document.body.appendChild(audio);
 
-  const shimmerFilter = ctx.createBiquadFilter();
-  shimmerFilter.type = 'bandpass';
-  shimmerFilter.frequency.value = 1200;
-  shimmerFilter.Q.value = 1.4;
-  shimmerBus.connect(shimmerFilter);
-  shimmerFilter.connect(master);
-
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.value = 0.012;
-  noiseGain.connect(master);
-  const noiseFilter = ctx.createBiquadFilter();
-  noiseFilter.type = 'lowpass';
-  noiseFilter.frequency.value = 650;
-  noiseFilter.Q.value = 0.9;
-  noiseFilter.connect(noiseGain);
-
-  const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    data[i] = (Math.random() * 2 - 1) * 0.22;
-  }
-  const noiseSource = ctx.createBufferSource();
-  noiseSource.buffer = noiseBuffer;
-  noiseSource.loop = true;
-  noiseSource.connect(noiseFilter);
-  noiseSource.start();
-
-  ambient.ctx = ctx;
-  ambient.master = master;
-  ambient.shimmerBus = shimmerBus;
-  ambient.padVoices = padVoices;
-  ambient.noiseSource = noiseSource;
-
-  ambient.spawnShimmer = function spawnShimmer(){
-    const now = ctx.currentTime + 0.05;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    const freq = 660 + Math.random() * 280;
-    osc.frequency.setValueAtTime(freq, now);
-    osc.detune.setValueAtTime(Math.random() * 40 - 20, now);
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    const rise = now + 0.6 + Math.random() * 0.4;
-    const fall = rise + 2.8;
-    gain.gain.linearRampToValueAtTime(0.018, rise);
-    gain.gain.exponentialRampToValueAtTime(0.0001, fall);
-
-    osc.connect(gain);
-    gain.connect(shimmerBus);
-
-    osc.start(now);
-    osc.stop(fall + 0.8);
-  };
-
-  ambient.queueShimmer = function queueShimmer(){
-    if (!ambient.ctx) return;
-    const delay = 5200 + Math.random() * 4200;
-    ambient.shimmerTimer = setTimeout(() => {
-      if (!ambient.ctx || !ambient.active) {
-        ambient.shimmerTimer = null;
-        return;
-      }
-      ambient.spawnShimmer();
-      ambient.queueShimmer();
-    }, delay);
-  };
-
+  ambient.audio = audio;
   return ambient;
+}
+
+function fadeAudioTo(audio, target, duration, done){
+  if (!audio) return;
+  if (ambient.fadeHandle) {
+    cancelAnimationFrame(ambient.fadeHandle);
+    ambient.fadeHandle = null;
+  }
+  const startVolume = audio.volume;
+  const clampedTarget = clamp(target, 0, 1);
+  if (duration <= 0) {
+    audio.volume = clampedTarget;
+    if (done) done();
+    return;
+  }
+  const startTime = performance.now();
+  function step(now){
+    const progress = clamp((now - startTime) / (duration * 1000), 0, 1);
+    const value = startVolume + (clampedTarget - startVolume) * progress;
+    audio.volume = clamp(value, 0, 1);
+    if (progress < 1) {
+      ambient.fadeHandle = requestAnimationFrame(step);
+    } else {
+      ambient.fadeHandle = null;
+      if (done) done();
+    }
+  }
+  ambient.fadeHandle = requestAnimationFrame(step);
 }
 
 function updateAudioToggle(){
@@ -541,33 +468,28 @@ function startAmbient(auto = false){
     if (audioToggle) audioToggle.style.display = 'none';
     return;
   }
-  const resume = state.ctx.resume();
-  if (resume && typeof resume.then === 'function') {
-    resume.catch(()=>{});
+  const { audio } = state;
+  const playPromise = audio.play();
+  if (playPromise && typeof playPromise.then === 'function') {
+    playPromise.catch(() => {
+      if (audioToggle) audioToggle.style.display = 'none';
+    });
   }
-  const now = state.ctx.currentTime;
-  const target = auto ? 0.28 : 0.36;
-  state.master.gain.cancelScheduledValues(now);
-  state.master.gain.setValueAtTime(Math.max(state.master.gain.value, 0.0001), now);
-  state.master.gain.linearRampToValueAtTime(target, now + 3.2);
+  const target = auto ? 0.24 : 0.32;
+  fadeAudioTo(audio, target, 3.2);
   state.active = true;
-  if (!state.shimmerTimer) {
-    state.spawnShimmer();
-    state.queueShimmer();
-  }
   updateAudioToggle();
 }
 
 function stopAmbient(){
-  if (!ambient.ctx || !ambient.active) return;
-  const now = ambient.ctx.currentTime;
-  ambient.master.gain.cancelScheduledValues(now);
-  ambient.master.gain.setValueAtTime(Math.max(ambient.master.gain.value, 0.0001), now);
-  ambient.master.gain.linearRampToValueAtTime(0.0001, now + 2.4);
-  if (ambient.shimmerTimer) {
-    clearTimeout(ambient.shimmerTimer);
-    ambient.shimmerTimer = null;
-  }
+  if (!ambient.audio || !ambient.active) return;
+  const audio = ambient.audio;
+  fadeAudioTo(audio, 0.0001, 2.2, () => {
+    if (audio.volume <= 0.001) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  });
   ambient.active = false;
   updateAudioToggle();
 }
