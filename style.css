@@ -55,7 +55,7 @@ box-shadow:0 0 16px rgba(255,126,191,.8),0 0 34px rgba(255,114,185,.45)}
 .close:active{transform:scale(.96)}
 
 /* Подсказка */
-#hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;font-size:14px;color:#e8edff;background:rgba(12,18,30,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:6;opacity:0;transition:opacity .6s ease}
+#hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;font-size:14px;color:#e8edff;background:rgba(12,18,30,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:6;opacity:0;transition:opacity .6s ease;text-align:center}
 #hint.show{opacity:1}
 
 /* Кнопка звука */
