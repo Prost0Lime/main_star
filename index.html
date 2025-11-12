@@ -16,28 +16,28 @@
       <defs>
         <!-- Небо: градиент от вечера к ночи (анимируется классами) -->
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="skyTop" offset="0%" stop-color="#4f7fbc"/>
-          <stop id="skyMid" offset="60%" stop-color="#9ab6e6"/>
-          <stop id="skyBot" offset="100%" stop-color="#f6c38f"/>
+          <stop id="skyTop" offset="0%" stop-color="#ffb35c"/>
+          <stop id="skyMid" offset="55%" stop-color="#ff6e6e"/>
+          <stop id="skyBot" offset="100%" stop-color="#6c2bd9"/>
         </linearGradient>
 
         <linearGradient id="duneGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#202c46" />
-          <stop offset="60%" stop-color="#141e33" />
-          <stop offset="100%" stop-color="#0d1525" />
+          <stop offset="0%" stop-color="#1d1a3c" />
+          <stop offset="60%" stop-color="#141133" />
+          <stop offset="100%" stop-color="#0b0a26" />
         </linearGradient>
 
         <linearGradient id="hillGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#131c2c" />
-          <stop offset="45%" stop-color="#0f1927" />
-          <stop offset="100%" stop-color="#0a1220" />
+          <stop offset="0%" stop-color="#110d28" />
+          <stop offset="45%" stop-color="#0c0a22" />
+          <stop offset="100%" stop-color="#07051a" />
         </linearGradient>
 
         <!-- Сумеречное свечение у горизонта -->
         <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="horizonTop" offset="0%" stop-color="#f3c27f" stop-opacity="0.92" />
-          <stop id="horizonMid" offset="55%" stop-color="#6b4c7c" stop-opacity="0.48" />
-          <stop id="horizonBot" offset="100%" stop-color="#08101c" stop-opacity="0" />
+          <stop id="horizonTop" offset="0%" stop-color="#ffb978" stop-opacity="0.92" />
+          <stop id="horizonMid" offset="55%" stop-color="#8548a8" stop-opacity="0.48" />
+          <stop id="horizonBot" offset="100%" stop-color="#06091b" stop-opacity="0" />
         </linearGradient>
 
         <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
@@ -52,6 +52,13 @@
           <stop offset="100%" stop-color="#ff9a3c" stop-opacity="0"/>
         </radialGradient>
 
+        <radialGradient id="milkyGrad" cx="50%" cy="45%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.58" />
+          <stop offset="30%" stop-color="#d8c6ff" stop-opacity="0.32" />
+          <stop offset="68%" stop-color="#9774ff" stop-opacity="0.12" />
+          <stop offset="100%" stop-color="#5434c5" stop-opacity="0" />
+        </radialGradient>
+
         <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3"/>
         </filter>
@@ -60,6 +67,9 @@
       <g id="scene">
         <!-- Небо -->
         <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
+
+        <!-- Млечный путь -->
+        <ellipse id="milkyWay" cx="195" cy="170" rx="300" ry="160" fill="url(#milkyGrad)" opacity="0"></ellipse>
 
         <!-- Солнце -->
         <g id="sunGroup">
@@ -94,11 +104,6 @@
           <path d="M-30,710 C 52,662 168,654 272,680 C 332,696 394,722 424,760 V844 H-30 Z" fill="url(#hillGrad)"/>
         </g>
 
-        <!-- Текст-приглашение -->
-        <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
-              style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
-          Смотри, как день становится ночью…
-        </text>
       </g>
     </svg>
 
@@ -108,6 +113,13 @@
         <canvas id="bg"></canvas>
         <div id="stars-layer" aria-label="звёзды"></div>
       </div>
+    </div>
+
+    <!-- Текстовая композиция интро -->
+    <div class="hero-copy" aria-hidden="true">
+      <div class="hero-title hero-float">Где закат встречает космос</div>
+      <div class="hero-subtitle hero-float">Проведи взглядом лучи солнца, следуй за первыми звёздами</div>
+      <div class="hero-signature hero-float">для нас двоих</div>
     </div>
 
     <!-- Модалка воспоминания -->
@@ -129,6 +141,7 @@
     <button id="audioToggle" class="audio-toggle" aria-label="Включить атмосферный звук" aria-pressed="false">🔈</button>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

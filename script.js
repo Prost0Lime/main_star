@@ -43,7 +43,13 @@ const clouds = document.getElementById('clouds');
 const horizonGlow = document.getElementById('horizonGlow');
 const introStarsGroup = document.getElementById('introStars');
 let introStarDots = [];
-const introText = document.getElementById('introText');
+let introStarsTweens = [];
+let introTimeline = null;
+const milkyWay = document.getElementById('milkyWay');
+const heroCopy = document.querySelector('.hero-copy');
+const heroTitle = document.querySelector('.hero-title');
+const heroSubtitle = document.querySelector('.hero-subtitle');
+const heroSignature = document.querySelector('.hero-signature');
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -133,29 +139,6 @@ const CONSTELLATION_EDGES = [
   [3, 12],
 ];
 
-// === ЭТАПЫ ИНТРО ===
-// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
-const INTRO = {
-  SUNSET_DURATION: 4.8,
-  BLUE_HOUR: 1.8,
-  NIGHT_FALL: 0,
-  STARS_DELAY: 0,
-  STARS_FADE: 0,
-  HOLD: 0.45,
-};
-
-const CAMERA = {
-  START_OFFSET: 0.62,
-  DURATION: 3.4,
-  LIFT: 360,
-  SCALE: 1.12,
-};
-
-INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
-const finaleTail = INTRO.STARS_DELAY + INTRO.STARS_FADE;
-INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.HOLD;
-
-let startTime = null;
 let introFinished = false;
 let backgroundStarted = false;
 
@@ -217,128 +200,190 @@ function initIntroStars(){
   }
 }
 
-const SKY = {
-  top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
-  mid: { day: '#9ab6e6', dusk: '#465c87', night: '#081327' },
-  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0b1a2e' },
-};
-
-const HORIZON = {
-  top: { dusk: '#f3c27f', night: '#162339' },
-  mid: { dusk: '#6b4c7c', night: '#0d192c' },
-  botOpacity: { dusk: 0.24, night: 0 },
-};
-
-function animateIntro(ts){
-  if (introFinished) return;
-  if(!startTime) startTime = ts;
-  const t = (ts - startTime) / 1000;
-
-  const sunsetProgress = easeInOutCubic(clamp(t / INTRO.SUNSET_DURATION, 0, 1));
-  const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
-  const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
-
-  if (!backgroundStarted && nightProgress > 0.2) {
-    initBackground();
-  }
-
-  const stageTop = mixColor(SKY.top.day, SKY.top.dusk, sunsetProgress);
-  const stageMid = mixColor(SKY.mid.day, SKY.mid.dusk, sunsetProgress);
-  const stageBot = mixColor(SKY.bot.day, SKY.bot.dusk, sunsetProgress);
-
-  skyTop.setAttribute('stop-color', mixColor(stageTop, SKY.top.night, twilightProgress));
-  skyMid.setAttribute('stop-color', mixColor(stageMid, SKY.mid.night, twilightProgress));
-  skyBot.setAttribute('stop-color', mixColor(stageBot, SKY.bot.night, twilightProgress));
-
-  const horizonTopColor = mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress);
-  horizonTop.setAttribute('stop-color', horizonTopColor);
-  horizonTop.setAttribute('stop-opacity', (0.94 * (1 - twilightProgress * 0.7)).toFixed(3));
-  horizonMid.setAttribute('stop-color', mixColor(HORIZON.mid.dusk, HORIZON.mid.night, twilightProgress));
-  horizonMid.setAttribute('stop-opacity', (0.52 * (1 - twilightProgress * 0.88)).toFixed(3));
-  horizonBot.setAttribute('stop-opacity', (HORIZON.botOpacity.dusk * (1 - twilightProgress)).toFixed(3));
-  horizonGlow.setAttribute('opacity', (0.92 * (1 - twilightProgress) * (1 - nightProgress * 0.8)).toFixed(3));
-
-  const sunY = lerp(560, 720, sunsetProgress);
-  const sunScale = lerp(1, 0.78, sunsetProgress);
-  sunGroup.setAttribute('transform', `translate(0, ${sunY-560}) scale(${sunScale})`);
-  sun.setAttribute('opacity', Math.max(0, 1 - sunsetProgress * 0.85 - twilightProgress * 0.6).toFixed(3));
-
-  const cloudShift = lerp(0, -150, sunsetProgress) + lerp(0, -80, twilightProgress);
-  clouds.setAttribute('transform', `translate(${cloudShift}, ${-8 * sunsetProgress})`);
-  const cloudOpacity = 0.9 * (1 - sunsetProgress * 0.4) * (1 - twilightProgress) * (1 - nightProgress);
-  clouds.setAttribute('opacity', Math.max(0, cloudOpacity).toFixed(3));
-
-  const textOpacity = Math.max(0, 0.95 * (1 - sunsetProgress * 1.1));
-  introText.setAttribute('opacity', textOpacity.toFixed(3));
-
-  const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
-  const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
-  if (scene) {
-    const lift = lerp(0, CAMERA.LIFT, cameraProgress);
-    const scale = lerp(1, CAMERA.SCALE, cameraProgress);
-    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
-  }
-  const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
-  intro.style.opacity = (1 - fadeBlend).toFixed(3);
-
-  if (introStarsGroup) {
-    const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
-    const inRaw = clamp((t - starsStart) / INTRO.STARS_FADE, 0, 1);
-    const starsProgress = easeInOutCubic(inRaw);
-    const fadeOut = 1 - easeInOutCubic(clamp((nightProgress - 0.42) / 0.46, 0, 1));
-    const starOpacity = starsProgress * fadeOut;
-    introStarsGroup.setAttribute('opacity', starOpacity.toFixed(3));
-    introStarDots.forEach((star) => {
-      const base = parseFloat(star.dataset.baseR || star.getAttribute('r'));
-      const delay = parseFloat(star.dataset.delay || '0');
-      const wobble = parseFloat(star.dataset.wobble || '0.28');
-      const localRaw = clamp((t - starsStart - delay) / (INTRO.STARS_FADE * 0.9), 0, 1);
-      const local = easeInOutCubic(localRaw);
-      const settle = 1 - easeInOutCubic(clamp((nightProgress - 0.58) / 0.34, 0, 1));
-      const pulse = 0.65 + local * 0.55 + Math.sin((t * 0.6 + delay * 3)) * wobble * settle;
-      star.setAttribute('r', Math.max(0.1, base * pulse * settle).toFixed(2));
+function animateIntroStarsPulse(){
+  if (!window.gsap || !introStarDots.length) return;
+  introStarsTweens.forEach((tween) => {
+    if (tween && typeof tween.kill === 'function') tween.kill();
+  });
+  introStarsTweens = introStarDots.map((star) => {
+    const base = parseFloat(star.dataset.baseR || star.getAttribute('r') || '1.2');
+    const toRadius = base * rand(1.4, 1.85);
+    return gsap.to(star, {
+      attr: { r: toRadius },
+      duration: rand(2.4, 3.6),
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+      delay: rand(0, 2.6),
     });
-  }
+  });
+}
 
-  if (t >= INTRO.TOTAL) {
+function buildIntroTimeline(){
+  if (!window.gsap || !intro) {
     endIntro();
     return;
   }
 
-  requestAnimationFrame(animateIntro);
+  const durations = {
+    sunset: 6.2,
+    twilight: 3.8,
+    night: 4.6,
+    dawn: 6.4,
+  };
+
+  introTimeline = gsap.timeline({
+    defaults: { ease: 'power2.inOut' },
+    repeat: -1,
+    repeatDelay: 0,
+    onRepeat: () => {
+      if (!introFinished) {
+        endIntro();
+      }
+    },
+  });
+
+  introTimeline.set(scene, { transformOrigin: '50% 70%', y: 0, scale: 1 });
+  introTimeline.set(sunGroup, { transformOrigin: '195px 560px', y: 0, scale: 1 });
+  introTimeline.set(clouds, { x: 0, y: 0, opacity: 0.96 });
+  if (milkyWay) {
+    introTimeline.set(milkyWay, { transformOrigin: '50% 50%', scale: 1.08, rotation: -5, autoAlpha: 0 });
+  }
+  if (introStarsGroup) {
+    introTimeline.set(introStarsGroup, { autoAlpha: 0 });
+  }
+
+  const { sunset, twilight, night, dawn } = durations;
+  const settleOffset = Math.max(0, dawn - 1.8);
+
+  introTimeline.addLabel('sunset', 0);
+  introTimeline.to(skyTop, { attr: { 'stop-color': '#ff9d67' }, duration: sunset }, 'sunset');
+  introTimeline.to(skyMid, { attr: { 'stop-color': '#ff7a7a' }, duration: sunset }, 'sunset');
+  introTimeline.to(skyBot, { attr: { 'stop-color': '#7c3ae1' }, duration: sunset }, 'sunset');
+  introTimeline.to(horizonTop, { attr: { 'stop-color': '#ffc085' }, duration: sunset }, 'sunset');
+  introTimeline.to(horizonMid, { attr: { 'stop-color': '#b25acd' }, duration: sunset }, 'sunset');
+  introTimeline.to(horizonGlow, { opacity: 0.88, duration: sunset, ease: 'sine.inOut' }, 'sunset');
+  introTimeline.to(sunGroup, { y: 195, scale: 0.55, duration: sunset, ease: 'power1.inOut' }, 'sunset');
+  introTimeline.to(sun, { autoAlpha: 0, duration: sunset * 0.65, ease: 'power1.out' }, 'sunset+=0.3');
+  introTimeline.to(clouds, { x: -160, y: -48, duration: sunset, ease: 'power1.inOut' }, 'sunset');
+  introTimeline.to(scene, { y: -90, scale: 1.08, duration: sunset, ease: 'power2.inOut' }, 'sunset+=0.4');
+
+  introTimeline.addLabel('twilight', `sunset+=${sunset}`);
+  introTimeline.to(skyTop, { attr: { 'stop-color': '#d57ff7' }, duration: twilight }, 'twilight');
+  introTimeline.to(skyMid, { attr: { 'stop-color': '#8c4fe6' }, duration: twilight }, 'twilight');
+  introTimeline.to(skyBot, { attr: { 'stop-color': '#36186f' }, duration: twilight }, 'twilight');
+  introTimeline.to(horizonTop, { attr: { 'stop-color': '#ff9b80' }, duration: twilight }, 'twilight');
+  introTimeline.to(horizonMid, { attr: { 'stop-color': '#743ec7' }, duration: twilight }, 'twilight');
+  introTimeline.to(horizonGlow, { opacity: 0.56, duration: twilight, ease: 'sine.inOut' }, 'twilight');
+  if (milkyWay) {
+    introTimeline.to(milkyWay, { autoAlpha: 0.48, duration: twilight * 0.85, ease: 'sine.inOut' }, 'twilight+=0.3');
+    introTimeline.to(milkyWay, { rotation: 2, duration: twilight, ease: 'sine.inOut' }, 'twilight');
+  }
+  if (introStarsGroup) {
+    introTimeline.to(introStarsGroup, { autoAlpha: 0.78, duration: twilight * 0.9, ease: 'sine.inOut' }, 'twilight+=0.2');
+  }
+  introTimeline.to(scene, { y: -210, scale: 1.14, duration: twilight, ease: 'power2.inOut' }, 'twilight');
+  introTimeline.to(clouds, { opacity: 0.52, duration: twilight, ease: 'sine.inOut' }, 'twilight');
+
+  introTimeline.addLabel('night', `twilight+=${twilight}`);
+  introTimeline.to(skyTop, { attr: { 'stop-color': '#2b0b3f' }, duration: night }, 'night');
+  introTimeline.to(skyMid, { attr: { 'stop-color': '#1c0f3f' }, duration: night }, 'night');
+  introTimeline.to(skyBot, { attr: { 'stop-color': '#090421' }, duration: night }, 'night');
+  introTimeline.to(horizonTop, { attr: { 'stop-color': '#8c3eae' }, duration: night }, 'night');
+  introTimeline.to(horizonMid, { attr: { 'stop-color': '#3c1f7c' }, duration: night }, 'night');
+  introTimeline.to(horizonGlow, { opacity: 0.24, duration: night, ease: 'sine.inOut' }, 'night');
+  if (milkyWay) {
+    introTimeline.to(milkyWay, { autoAlpha: 0.86, duration: night * 0.65, ease: 'sine.inOut' }, 'night');
+    introTimeline.to(milkyWay, { rotation: 6, duration: night, ease: 'sine.inOut' }, 'night');
+  }
+  if (introStarsGroup) {
+    introTimeline.to(introStarsGroup, { autoAlpha: 1, duration: night * 0.6, ease: 'sine.inOut' }, 'night');
+  }
+  introTimeline.to(scene, { y: -280, scale: 1.2, duration: night, ease: 'power2.inOut' }, 'night');
+  introTimeline.to(clouds, { opacity: 0.22, duration: night, ease: 'sine.inOut' }, 'night');
+
+  introTimeline.addLabel('dawn', `night+=${night}`);
+  introTimeline.to(skyTop, { attr: { 'stop-color': '#ffb35c' }, duration: dawn }, 'dawn');
+  introTimeline.to(skyMid, { attr: { 'stop-color': '#ff6e6e' }, duration: dawn }, 'dawn');
+  introTimeline.to(skyBot, { attr: { 'stop-color': '#6c2bd9' }, duration: dawn }, 'dawn');
+  introTimeline.to(horizonTop, { attr: { 'stop-color': '#ffb978' }, duration: dawn }, 'dawn');
+  introTimeline.to(horizonMid, { attr: { 'stop-color': '#8548a8' }, duration: dawn }, 'dawn');
+  introTimeline.to(horizonGlow, { opacity: 0.92, duration: dawn, ease: 'sine.inOut' }, 'dawn');
+  introTimeline.to(sunGroup, { y: 0, scale: 1, duration: dawn, ease: 'power1.inOut' }, 'dawn');
+  introTimeline.to(sun, { autoAlpha: 1, duration: dawn * 0.8, ease: 'sine.out' }, 'dawn+=1.2');
+  introTimeline.to(clouds, { x: 0, y: 0, opacity: 0.96, duration: dawn, ease: 'power1.inOut' }, 'dawn');
+  if (milkyWay) {
+    introTimeline.to(milkyWay, { autoAlpha: 0, duration: dawn * 0.8, ease: 'sine.inOut' }, 'dawn');
+    introTimeline.to(milkyWay, { rotation: 12, duration: dawn, ease: 'sine.inOut' }, 'dawn');
+  }
+  if (introStarsGroup) {
+    introTimeline.to(introStarsGroup, { autoAlpha: 0.12, duration: dawn * 0.8, ease: 'sine.inOut' }, 'dawn');
+  }
+  introTimeline.to(scene, { y: -60, scale: 1.04, duration: dawn, ease: 'power2.inOut' }, 'dawn');
+  introTimeline.to(scene, { y: 0, scale: 1, duration: 1.8, ease: 'power2.out' }, `dawn+=${settleOffset.toFixed(2)}`);
+
+  introTimeline.call(() => {
+    if (!backgroundStarted) {
+      initBackground();
+    }
+  }, null, 'night+=1.6');
+}
+
+function animateHeroCopy(){
+  if (!window.gsap) return;
+  const revealTimeline = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  const items = [heroTitle, heroSubtitle, heroSignature].filter(Boolean);
+  items.forEach((el, idx) => {
+    gsap.set(el, { autoAlpha: 0, y: 32 + idx * 6 });
+  });
+  if (heroTitle) {
+    revealTimeline.to(heroTitle, { autoAlpha: 1, y: 0, duration: 1.6 }, 0);
+  }
+  if (heroSubtitle) {
+    revealTimeline.to(heroSubtitle, { autoAlpha: 1, y: 0, duration: 1.8 }, 0.25);
+  }
+  if (heroSignature) {
+    revealTimeline.to(heroSignature, { autoAlpha: 1, y: 0, duration: 1.8 }, 0.5);
+  }
+  if (heroCopy) {
+    gsap.set(heroCopy, { filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' });
+    revealTimeline.to(heroCopy, { filter: 'drop-shadow(0 18px 48px rgba(90, 60, 200, 0.35))', duration: 2.6, ease: 'sine.out' }, 0.4);
+  }
+  revealTimeline.call(() => {
+    items.forEach((el, idx) => {
+      gsap.to(el, {
+        y: '+=12',
+        duration: 9 + idx * 1.2,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+        delay: idx * 0.25,
+      });
+    });
+  });
 }
 
 function endIntro(){
+  if (introFinished) return;
   introFinished = true;
-  intro.style.opacity = '0';
-  intro.classList.add('hidden');
-  // Запуск ночного фона и звёзд
+  if (intro){
+    if (window.gsap){
+      gsap.to(intro, { duration: 1.6, autoAlpha: 0, ease: 'sine.out', onComplete: () => intro.classList.add('hidden') });
+    } else {
+      intro.classList.add('hidden');
+    }
+  }
+  if (heroCopy){
+    if (window.gsap){
+      gsap.to(heroCopy, { duration: 1.4, autoAlpha: 0, ease: 'sine.out' });
+    } else {
+      heroCopy.style.opacity = '0';
+    }
+  }
   initBackground();
   placeFeaturedStars();
   hint.classList.add('show');
   hint.classList.remove('hidden');
-}
-
-// Смешивание цветов hex → hex
-function hexToRgb(hex){
-  const n = hex.replace('#','');
-  const bigint = parseInt(n, 16);
-  if (n.length === 6){
-    return [(bigint>>16)&255, (bigint>>8)&255, bigint&255];
-  }
-  return [0,0,0];
-}
-function rgbToHex([r,g,b]){
-  const s = (n)=> n.toString(16).padStart(2,'0');
-  return '#' + s(r) + s(g) + s(b);
-}
-function mixColor(a,b,t){
-  const ra = hexToRgb(a), rb = hexToRgb(b);
-  return rgbToHex([
-    Math.round(lerp(ra[0], rb[0], t)),
-    Math.round(lerp(ra[1], rb[1], t)),
-    Math.round(lerp(ra[2], rb[2], t)),
-  ]);
 }
 
 // === НОЧНОЙ ФОН И ЗВЁЗДЫ (canvas+divs) ===
@@ -712,9 +757,10 @@ function renderBackground(t){
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
   const g = bgCtx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#050b16');
-  g.addColorStop(0.55, '#081327');
-  g.addColorStop(1, '#0b1a2e');
+  g.addColorStop(0, '#130a2c');
+  g.addColorStop(0.5, '#1a0f3f');
+  g.addColorStop(0.78, '#0d0828');
+  g.addColorStop(1, '#05031a');
   bgCtx.fillStyle = g;
   bgCtx.fillRect(0,0,W,H);
 
@@ -1313,7 +1359,9 @@ function initBackground(){
 // Старт анимации интро
 initIntroStars();
 initClouds();
-requestAnimationFrame(animateIntro);
+animateIntroStarsPulse();
+buildIntroTimeline();
+animateHeroCopy();
 
 // Предзагрузка изображений
 for (const m of MEMORIES) { const img = new Image(); img.src = m.src; }
