@@ -65,6 +65,7 @@ const hint = document.getElementById('hint');
 const HINT_DEFAULT_TEXT = hint ? hint.textContent : '';
 const HINT_HEART_MESSAGE = 'С любовью ...';
 const audioToggle = document.getElementById('audioToggle');
+const orientationLock = document.getElementById('orientationLock');
 
 const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
 const smallViewport = Math.max(window.innerWidth, window.innerHeight) <= 900;
@@ -109,6 +110,59 @@ const HEART_MOVE_DURATION = 2.8;
 const HEART_MOVE_STAGGER = 0.08;
 const HEART_LINE_DELAY = 0.6;
 const HEART_LINE_DRAW_DURATION = 5.4;
+
+let orientationLocked = false;
+let tapAudioContext = null;
+
+function updateOrientationLockState(){
+  const shouldLock = coarsePointer && window.innerWidth > window.innerHeight;
+  orientationLocked = shouldLock;
+  document.body.classList.toggle('landscape-locked', shouldLock);
+  if (orientationLock){
+    orientationLock.setAttribute('aria-hidden', shouldLock ? 'false' : 'true');
+  }
+}
+
+function ensureTapAudioContext(){
+  if (tapAudioContext) return tapAudioContext;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  tapAudioContext = new AudioCtx();
+  return tapAudioContext;
+}
+
+function playStarTapSound(){
+  const ctx = ensureTapAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(640, now);
+  osc.frequency.exponentialRampToValueAtTime(420, now + 0.2);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.16, now + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.36);
+}
+
+function triggerStarHaptics(){
+  if (!coarsePointer) return;
+  if (navigator && typeof navigator.vibrate === 'function') {
+    navigator.vibrate(18);
+  }
+}
+
+function provideStarFeedback(){
+  playStarTapSound();
+  triggerStarHaptics();
+}
 
 let introTimeline = null;
 let introStarTweens = [];
@@ -269,24 +323,67 @@ function startIntroTimeline(){
     onComplete: finalizeIntro,
   });
 
-  if (skyZenith) introTimeline.to(skyZenith, { attr: { 'stop-color': '#2B0B3F' }, duration: 8.2 }, 0);
-  if (skyUpper) introTimeline.to(skyUpper, { attr: { 'stop-color': '#311460' }, duration: 8.2 }, 0.1);
-  if (skyMidStop) introTimeline.to(skyMidStop, { attr: { 'stop-color': '#6C2BD9' }, duration: 8.4 }, 0.3);
-  if (skyHorizon) introTimeline.to(skyHorizon, { attr: { 'stop-color': '#452987' }, duration: 8.6 }, 0.5);
-  if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: 7.2 }, 0.8);
-  if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: 7.2 }, 0.9);
-  if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: 6.8 }, 1);
-  if (duskGlow) introTimeline.to(duskGlow, { y: 220, opacity: 0.22, duration: 7.2 }, 1);
-  if (sunGroup) introTimeline.to(sunGroup, { y: 260, scale: 0.66, duration: 6.4, ease: 'power1.in' }, 0);
-  if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 5.4, ease: 'power1.out' }, 0.4);
-  if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 5.2, ease: 'power1.out' }, 0.6);
-  if (clouds) introTimeline.to(clouds, { y: 200, opacity: 0, duration: 7, ease: 'sine.inOut' }, 0.4);
-  if (scene) introTimeline.to(scene, { y: 420, scale: 1.28, duration: 9.6, ease: 'sine.inOut' }, 1.4);
-  if (ridgeFar) introTimeline.to(ridgeFar, { y: 200, duration: 9.6, ease: 'sine.inOut' }, 1.4);
-  if (ridgeMid) introTimeline.to(ridgeMid, { y: 260, duration: 9.6, ease: 'sine.inOut' }, 1.4);
-  if (ridgeNear) introTimeline.to(ridgeNear, { y: 320, duration: 9.6, ease: 'sine.inOut' }, 1.4);
-  if (valleyMist) introTimeline.to(valleyMist, { y: 260, opacity: 0.34, duration: 9.6, ease: 'sine.inOut' }, 1.4);
-  if (introText) introTimeline.to(introText, { attr: { y: '48%' }, duration: 6.6, ease: 'sine.inOut' }, 1.2);
+  if (skyZenith) introTimeline.to(skyZenith, { attr: { 'stop-color': '#2B0B3F' }, duration: 9.6, ease: 'sine.inOut' }, 0);
+  if (skyUpper) introTimeline.to(skyUpper, { attr: { 'stop-color': '#311460' }, duration: 9.6, ease: 'sine.inOut' }, 0.1);
+  if (skyMidStop) introTimeline.to(skyMidStop, { attr: { 'stop-color': '#6C2BD9' }, duration: 9.8, ease: 'sine.inOut' }, 0.3);
+  if (skyHorizon) introTimeline.to(skyHorizon, { attr: { 'stop-color': '#452987' }, duration: 9.8, ease: 'sine.inOut' }, 0.5);
+  if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: 8.8, ease: 'sine.inOut' }, 0.8);
+  if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: 8.8, ease: 'sine.inOut' }, 0.9);
+  if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: 8.4, ease: 'sine.inOut' }, 1);
+  if (duskGlow) introTimeline.to(duskGlow, { y: 240, opacity: 0.18, duration: 9.4, ease: 'power1.inOut' }, 0.6);
+  if (sunGroup) {
+    introTimeline.to(sunGroup, {
+      keyframes: [
+        { y: 120, scale: 0.88, duration: 2.8, ease: 'sine.inOut' },
+        { y: 320, scale: 0.6, duration: 6.6, ease: 'power1.in' }
+      ],
+      transformOrigin: '50% 50%'
+    }, 0);
+  }
+  if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 5.8, ease: 'power1.out' }, 0.4);
+  if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 5.6, ease: 'power1.out' }, 0.6);
+  if (clouds) introTimeline.to(clouds, { y: 200, opacity: 0, duration: 8.4, ease: 'sine.inOut' }, 0.8);
+  if (scene) {
+    introTimeline.to(scene, {
+      keyframes: [
+        { y: 180, scale: 1.08, duration: 4.4, ease: 'sine.inOut' },
+        { y: 420, scale: 1.24, duration: 5.8, ease: 'power2.inOut' }
+      ],
+    }, 1.2);
+  }
+  if (ridgeFar) {
+    introTimeline.to(ridgeFar, {
+      keyframes: [
+        { y: 120, duration: 4.4, ease: 'sine.inOut' },
+        { y: 220, duration: 5.8, ease: 'power2.inOut' }
+      ],
+    }, 1.2);
+  }
+  if (ridgeMid) {
+    introTimeline.to(ridgeMid, {
+      keyframes: [
+        { y: 180, duration: 4.4, ease: 'sine.inOut' },
+        { y: 280, duration: 5.8, ease: 'power2.inOut' }
+      ],
+    }, 1.2);
+  }
+  if (ridgeNear) {
+    introTimeline.to(ridgeNear, {
+      keyframes: [
+        { y: 240, duration: 4.4, ease: 'sine.inOut' },
+        { y: 340, duration: 5.8, ease: 'power2.inOut' }
+      ],
+    }, 1.2);
+  }
+  if (valleyMist) {
+    introTimeline.to(valleyMist, {
+      keyframes: [
+        { y: 180, opacity: 0.48, duration: 4.4, ease: 'sine.inOut' },
+        { y: 280, opacity: 0.34, duration: 5.8, ease: 'power2.inOut' }
+      ],
+    }, 1.2);
+  }
+  if (introText) introTimeline.to(introText, { attr: { y: '48%' }, duration: 7.2, ease: 'sine.inOut' }, 1.4);
 
   introTimeline.addLabel('twilight', 4.4);
   if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 4.4, ease: 'sine.inOut' }, 'twilight');
@@ -375,6 +472,7 @@ function updateDpr(){
 }
 
 function resize(){
+  updateOrientationLockState();
   updateDpr();
   const scale = dpr;
   const vw = window.innerWidth;
@@ -1049,11 +1147,12 @@ function placeFeaturedStars(){
       const rect = star.getBoundingClientRect();
       const sparkleX = rect.left + rect.width / 2;
       const sparkleY = rect.top + rect.height / 2;
+      provideStarFeedback();
       openMemory(mem.src, mem.caption);
       sparkle(sparkleX, sparkleY);
     };
     star.addEventListener('click', () => {
-      if (panJustHappened) return;
+      if (panJustHappened || orientationLocked) return;
       open();
     });
 
@@ -1241,16 +1340,23 @@ function startAmbient(auto = false){
     return;
   }
   const { audio } = state;
+  audio.currentTime = 0;
+  const target = auto ? 0.24 : 0.32;
+  const activate = () => {
+    fadeAudioTo(audio, target, 3.2);
+    state.active = true;
+    updateAudioToggle();
+  };
   const playPromise = audio.play();
   if (playPromise && typeof playPromise.then === 'function') {
-    playPromise.catch(() => {
-      if (audioToggle) audioToggle.style.display = 'none';
+    playPromise.then(activate).catch(() => {
+      state.active = false;
+      if (audioToggle) audioToggle.classList.remove('on');
+      updateAudioToggle();
     });
+  } else {
+    activate();
   }
-  const target = auto ? 0.24 : 0.32;
-  fadeAudioTo(audio, target, 3.2);
-  state.active = true;
-  updateAudioToggle();
 }
 
 function stopAmbient(){
@@ -1300,6 +1406,12 @@ if (spaceWrapper){
   spaceWrapper.addEventListener('wheel', handleSpaceWheel, { passive: false });
 }
 
+window.addEventListener('orientationchange', () => {
+  setTimeout(updateOrientationLockState, 50);
+});
+
+updateOrientationLockState();
+
 // Инициализация после завершения интро
 function initBackground(){
   if (backgroundStarted) return;
@@ -1314,6 +1426,7 @@ function initBackground(){
 initIntroStars();
 initClouds();
 startIntroTimeline();
+startAmbient(true);
 
 // Предзагрузка изображений
 for (const m of MEMORIES) { const img = new Image(); img.src = m.src; }

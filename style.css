@@ -18,6 +18,11 @@ body{margin:0;background:radial-gradient(circle at 50% 15%,#221238 0%,#090513 65
 @media (max-width:480px){#introText{font-size:clamp(14px,4.4vw,20px);--intro-letter:clamp(.1em,calc(.05em + .2vw),.18em)}}
 @media (orientation:landscape){#introText{font-size:clamp(14px,2.4vh,20px);--intro-letter:clamp(.1em,calc(.05em + .18vw),.18em)}}
 
+.orientation-lock{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:40px 32px;z-index:20;background:radial-gradient(120% 120% at 50% 50%,rgba(18,14,38,.88),rgba(5,4,14,.96));backdrop-filter:blur(16px);font-family:'Manrope',sans-serif;font-size:clamp(16px,4.6vw,22px);line-height:1.4;letter-spacing:.04em;color:#f2e8ff;text-transform:uppercase}
+.orientation-lock::after{content:"";position:absolute;inset:18%;border-radius:36px;border:1px solid rgba(255,255,255,.1);pointer-events:none}
+body.landscape-locked .orientation-lock{display:flex}
+body.landscape-locked #app>:not(.orientation-lock){visibility:hidden;pointer-events:none}
+
 @keyframes introTextGlow{0%,100%{fill:#ffe6f9;stroke:#ffffff10;opacity:.9;letter-spacing:var(--intro-letter)}50%{fill:#fff6ff;stroke:#ffe4ff33;opacity:1;letter-spacing:calc(var(--intro-letter) + .04em)}}
 
 /* Пост-интро слои */
