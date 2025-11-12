@@ -63,7 +63,7 @@ const space = document.getElementById('space');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
 const HINT_DEFAULT_TEXT = hint ? hint.textContent : '';
-const HINT_HEART_MESSAGE = 'С любовью ...';
+const HINT_HEART_MESSAGE = 'С любовью, с Днём Рождения 💝';
 const audioToggle = document.getElementById('audioToggle');
 const orientationLock = document.getElementById('orientationLock');
 
@@ -378,8 +378,8 @@ function startIntroTimeline(){
     introTimeline.to(clouds, { y: 240, opacity: 0, duration: 2.2, ease: 'power2.in' }, cloudDropCue);
   }
   if (scene) {
-    introTimeline.to(scene, { y: 320, scale: 1.14, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
-    introTimeline.to(scene, { y: 560, scale: 1.28, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+    introTimeline.to(scene, { y: '30%', scale: 2, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(scene, { y: '55%', scale: 4, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
   if (ridgeFar) {
     introTimeline.to(ridgeFar, { y: 140, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
@@ -399,7 +399,7 @@ function startIntroTimeline(){
   }
   if (introText) {
     introTimeline.to(introText, { attr: { y: '48%' }, duration: SUNSET_DURATION - 0.8, ease: 'sine.inOut' }, 0.6);
-    introTimeline.to(introText, { attr: { opacity: 0 }, duration: 2.4, ease: 'sine.inOut' }, textFadeCue);
+    introTimeline.to(introText, { attr: { y: '70%', opacity: 0 }, duration: 2.4, ease: 'sine.inOut' }, textFadeCue);
   }
 
   if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 3.8, ease: 'sine.inOut' }, starRevealCue);
