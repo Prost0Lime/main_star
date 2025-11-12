@@ -31,16 +31,25 @@ const FEATURED_COUNT = Math.min(25, MEMORIES.length);
 // === ССЫЛКИ НА СЛОИ ===
 const intro = document.getElementById('intro');
 const scene = document.getElementById('scene');
-const skyTop = document.getElementById('skyTop');
-const skyMid = document.getElementById('skyMid');
-const skyBot = document.getElementById('skyBot');
+const skyZenith = document.getElementById('skyZenith');
+const skyUpper = document.getElementById('skyUpper');
+const skyMidStop = document.getElementById('skyMid');
+const skyHorizon = document.getElementById('skyHorizon');
 const horizonTop = document.getElementById('horizonTop');
 const horizonMid = document.getElementById('horizonMid');
 const horizonBot = document.getElementById('horizonBot');
 const sunGroup = document.getElementById('sunGroup');
+const sunHalo = document.getElementById('sunHalo');
 const sun = document.getElementById('sun');
 const clouds = document.getElementById('clouds');
-const horizonGlow = document.getElementById('horizonGlow');
+const duskGlow = document.getElementById('duskGlow');
+const celestial = document.getElementById('celestial');
+const milkyWay = document.getElementById('milkyWay');
+const nebula = document.getElementById('nebula');
+const ridgeFar = document.getElementById('ridgeFar');
+const ridgeMid = document.getElementById('ridgeMid');
+const ridgeNear = document.getElementById('ridgeNear');
+const valleyMist = document.getElementById('valleyMist');
 const introStarsGroup = document.getElementById('introStars');
 let introStarDots = [];
 const introText = document.getElementById('introText');
@@ -54,8 +63,9 @@ const space = document.getElementById('space');
 const fx = document.getElementById('fx');
 const hint = document.getElementById('hint');
 const HINT_DEFAULT_TEXT = hint ? hint.textContent : '';
-const HINT_HEART_MESSAGE = 'С любовью ...';
+const HINT_HEART_MESSAGE = 'С любовью, с Днём Рождения 💝';
 const audioToggle = document.getElementById('audioToggle');
+const orientationLock = document.getElementById('orientationLock');
 
 const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
 const smallViewport = Math.max(window.innerWidth, window.innerHeight) <= 900;
@@ -101,6 +111,68 @@ const HEART_MOVE_STAGGER = 0.08;
 const HEART_LINE_DELAY = 0.6;
 const HEART_LINE_DRAW_DURATION = 5.4;
 
+let orientationLocked = false;
+let tapAudioContext = null;
+
+function updateOrientationLockState(){
+  const shouldLock = coarsePointer && window.innerWidth > window.innerHeight;
+  orientationLocked = shouldLock;
+  document.body.classList.toggle('landscape-locked', shouldLock);
+  if (orientationLock){
+    orientationLock.setAttribute('aria-hidden', shouldLock ? 'false' : 'true');
+  }
+}
+
+function ensureTapAudioContext(){
+  if (tapAudioContext) return tapAudioContext;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  tapAudioContext = new AudioCtx();
+  return tapAudioContext;
+}
+
+function playStarTapSound(){
+  const ctx = ensureTapAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle';
+  const baseFrequency = 783.99; // нота, напоминающая мягкий звон арфы
+  osc.frequency.setValueAtTime(baseFrequency, now);
+  osc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.92, now + 0.24);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(2600, now);
+  filter.Q.setValueAtTime(18, now);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.18, now + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.62);
+}
+
+function triggerStarHaptics(){
+  if (!coarsePointer) return;
+  if (navigator && typeof navigator.vibrate === 'function') {
+    navigator.vibrate(18);
+  }
+}
+
+function provideStarFeedback(){
+  playStarTapSound();
+  triggerStarHaptics();
+}
+
+let introTimeline = null;
+let introStarTweens = [];
+
 const CONSTELLATION_TEMPLATE = [
   { id: 1, x: 64, y: 312, size: 11.5, tw: 3.4 },
   { id: 2, x: 52, y: 96, size: 12.5, tw: 3.2 },
@@ -133,39 +205,36 @@ const CONSTELLATION_EDGES = [
   [3, 12],
 ];
 
-// === ЭТАПЫ ИНТРО ===
-// Таймлайн (секунды): 0–7 закат, 7–10 ночной переход, 10+ звезды + лампа
-const INTRO = {
-  SUNSET_DURATION: 4.8,
-  BLUE_HOUR: 1.8,
-  NIGHT_FALL: 0,
-  STARS_DELAY: 0,
-  STARS_FADE: 0,
-  HOLD: 0.45,
-};
-
-const CAMERA = {
-  START_OFFSET: 0.62,
-  DURATION: 3.4,
-  LIFT: 360,
-  SCALE: 1.12,
-};
-
-INTRO.TWILIGHT_TOTAL = INTRO.BLUE_HOUR + INTRO.NIGHT_FALL;
-const finaleTail = INTRO.STARS_DELAY + INTRO.STARS_FADE;
-INTRO.TOTAL = INTRO.SUNSET_DURATION + INTRO.TWILIGHT_TOTAL + finaleTail + INTRO.HOLD;
-
-let startTime = null;
-let introFinished = false;
-let backgroundStarted = false;
-
-function lerp(a,b,t){ return a + (b-a)*t; }
-function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
-function easeInOutCubic(x){
-  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+function buildSmoothClosedPath(points, tension = 0.55){
+  const count = points.length;
+  if (count === 0) return '';
+  if (count === 1){
+    const { x, y } = points[0];
+    const xStr = x.toFixed(2);
+    const yStr = y.toFixed(2);
+    return `M ${xStr} ${yStr} Z`;
+  }
+  if (count === 2){
+    const a = points[0];
+    const b = points[1];
+    return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} L ${b.x.toFixed(2)} ${b.y.toFixed(2)} Z`;
+  }
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < count; i++){
+    const p0 = points[(i - 1 + count) % count];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % count];
+    const p3 = points[(i + 2) % count];
+    const cp1x = p1.x + ((p2.x - p0.x) * tension) / 6;
+    const cp1y = p1.y + ((p2.y - p0.y) * tension) / 6;
+    const cp2x = p2.x - ((p3.x - p1.x) * tension) / 6;
+    const cp2y = p2.y - ((p3.y - p1.y) * tension) / 6;
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return `${path} Z`;
 }
-function easeOutCubic(x){ return 1 - Math.pow(1 - x, 3); }
-function easeOutQuad(x){ return 1 - (1 - x) * (1 - x); }
+
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -174,21 +243,21 @@ function rand(min, max) {
 function initClouds(){
   if (!clouds) return;
   while (clouds.firstChild) clouds.removeChild(clouds.firstChild);
-  const clusterCount = Math.floor(rand(3, 6));
+  const clusterCount = Math.floor(rand(4, 7));
   for (let i = 0; i < clusterCount; i++) {
     const group = document.createElementNS(SVG_NS, 'g');
-    const baseX = rand(-40, 260);
-    const baseY = rand(230, 320);
-    const scale = rand(0.55, 0.9);
+    const baseX = rand(-60, 260);
+    const baseY = rand(250, 360);
+    const scale = rand(0.58, 1.05);
     group.setAttribute('transform', `translate(${baseX.toFixed(1)} ${baseY.toFixed(1)}) scale(${scale.toFixed(3)})`);
-    const partCount = Math.floor(rand(3, 6));
+    const partCount = Math.floor(rand(4, 7));
     for (let p = 0; p < partCount; p++) {
       const circle = document.createElementNS(SVG_NS, 'circle');
-      circle.setAttribute('cx', rand(-42, 46).toFixed(1));
-      circle.setAttribute('cy', rand(-18, 18).toFixed(1));
-      circle.setAttribute('r', rand(16, 34).toFixed(1));
-      const opacity = (0.68 + Math.random() * 0.24).toFixed(2);
-      circle.setAttribute('fill', '#f6f8ff');
+      circle.setAttribute('cx', rand(-48, 52).toFixed(1));
+      circle.setAttribute('cy', rand(-24, 22).toFixed(1));
+      circle.setAttribute('r', rand(18, 42).toFixed(1));
+      const opacity = (0.32 + Math.random() * 0.36).toFixed(2);
+      circle.setAttribute('fill', '#ffe5d6');
       circle.setAttribute('fill-opacity', opacity);
       group.appendChild(circle);
     }
@@ -199,146 +268,175 @@ function initClouds(){
 function initIntroStars(){
   if (!introStarsGroup) return;
   introStarsGroup.innerHTML = '';
-  const count = 12;
+  const count = 14;
   introStarDots = [];
   for (let i = 0; i < count; i++) {
     const star = document.createElementNS(SVG_NS, 'circle');
-    const cx = rand(32, 358);
-    const cy = rand(56, 228);
-    const base = rand(0.9, 1.85);
+    const cx = rand(24, 366);
+    const cy = rand(48, 238);
+    const base = rand(1.1, 2.1);
     star.setAttribute('cx', cx.toFixed(1));
     star.setAttribute('cy', cy.toFixed(1));
     star.setAttribute('r', base.toFixed(2));
     star.dataset.baseR = base.toFixed(2);
-    star.dataset.delay = rand(0, 0.8).toFixed(3);
-    star.dataset.wobble = rand(0.18, 0.42).toFixed(3);
+    star.dataset.delay = rand(0, 1.4).toFixed(3);
+    star.dataset.wobble = rand(0.12, 0.28).toFixed(3);
     introStarsGroup.appendChild(star);
     introStarDots.push(star);
   }
+  if (window.gsap && typeof gsap.to === 'function') {
+    setupIntroStarTwinkles();
+  }
 }
 
-const SKY = {
-  top: { day: '#4f7fbc', dusk: '#2f466b', night: '#050b16' },
-  mid: { day: '#9ab6e6', dusk: '#465c87', night: '#081327' },
-  bot: { day: '#f6c38f', dusk: '#6c4a73', night: '#0b1a2e' },
-};
-
-const HORIZON = {
-  top: { dusk: '#f3c27f', night: '#162339' },
-  mid: { dusk: '#6b4c7c', night: '#0d192c' },
-  botOpacity: { dusk: 0.24, night: 0 },
-};
-
-function animateIntro(ts){
-  if (introFinished) return;
-  if(!startTime) startTime = ts;
-  const t = (ts - startTime) / 1000;
-
-  const sunsetProgress = easeInOutCubic(clamp(t / INTRO.SUNSET_DURATION, 0, 1));
-  const twilightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION) / INTRO.TWILIGHT_TOTAL, 0, 1));
-  const nightProgress = easeInOutCubic(clamp((t - INTRO.SUNSET_DURATION - INTRO.BLUE_HOUR) / INTRO.NIGHT_FALL, 0, 1));
-
-  if (!backgroundStarted && nightProgress > 0.2) {
-    initBackground();
-  }
-
-  const stageTop = mixColor(SKY.top.day, SKY.top.dusk, sunsetProgress);
-  const stageMid = mixColor(SKY.mid.day, SKY.mid.dusk, sunsetProgress);
-  const stageBot = mixColor(SKY.bot.day, SKY.bot.dusk, sunsetProgress);
-
-  skyTop.setAttribute('stop-color', mixColor(stageTop, SKY.top.night, twilightProgress));
-  skyMid.setAttribute('stop-color', mixColor(stageMid, SKY.mid.night, twilightProgress));
-  skyBot.setAttribute('stop-color', mixColor(stageBot, SKY.bot.night, twilightProgress));
-
-  const horizonTopColor = mixColor(HORIZON.top.dusk, HORIZON.top.night, twilightProgress);
-  horizonTop.setAttribute('stop-color', horizonTopColor);
-  horizonTop.setAttribute('stop-opacity', (0.94 * (1 - twilightProgress * 0.7)).toFixed(3));
-  horizonMid.setAttribute('stop-color', mixColor(HORIZON.mid.dusk, HORIZON.mid.night, twilightProgress));
-  horizonMid.setAttribute('stop-opacity', (0.52 * (1 - twilightProgress * 0.88)).toFixed(3));
-  horizonBot.setAttribute('stop-opacity', (HORIZON.botOpacity.dusk * (1 - twilightProgress)).toFixed(3));
-  horizonGlow.setAttribute('opacity', (0.92 * (1 - twilightProgress) * (1 - nightProgress * 0.8)).toFixed(3));
-
-  const sunY = lerp(560, 720, sunsetProgress);
-  const sunScale = lerp(1, 0.78, sunsetProgress);
-  sunGroup.setAttribute('transform', `translate(0, ${sunY-560}) scale(${sunScale})`);
-  sun.setAttribute('opacity', Math.max(0, 1 - sunsetProgress * 0.85 - twilightProgress * 0.6).toFixed(3));
-
-  const cloudShift = lerp(0, -150, sunsetProgress) + lerp(0, -80, twilightProgress);
-  clouds.setAttribute('transform', `translate(${cloudShift}, ${-8 * sunsetProgress})`);
-  const cloudOpacity = 0.9 * (1 - sunsetProgress * 0.4) * (1 - twilightProgress) * (1 - nightProgress);
-  clouds.setAttribute('opacity', Math.max(0, cloudOpacity).toFixed(3));
-
-  const textOpacity = Math.max(0, 0.95 * (1 - sunsetProgress * 1.1));
-  introText.setAttribute('opacity', textOpacity.toFixed(3));
-
-  const cameraStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR * (CAMERA.START_OFFSET - 0.25);
-  const cameraProgress = easeInOutCubic(clamp((t - cameraStart) / CAMERA.DURATION, 0, 1));
-  if (scene) {
-    const lift = lerp(0, CAMERA.LIFT, cameraProgress);
-    const scale = lerp(1, CAMERA.SCALE, cameraProgress);
-    scene.setAttribute('transform', `translate(0 ${lift.toFixed(2)}) scale(${scale.toFixed(3)})`);
-  }
-  const fadeBlend = clamp(nightProgress * 0.96, 0, 1);
-  intro.style.opacity = (1 - fadeBlend).toFixed(3);
-
-  if (introStarsGroup) {
-    const starsStart = INTRO.SUNSET_DURATION + INTRO.BLUE_HOUR + INTRO.STARS_DELAY;
-    const inRaw = clamp((t - starsStart) / INTRO.STARS_FADE, 0, 1);
-    const starsProgress = easeInOutCubic(inRaw);
-    const fadeOut = 1 - easeInOutCubic(clamp((nightProgress - 0.42) / 0.46, 0, 1));
-    const starOpacity = starsProgress * fadeOut;
-    introStarsGroup.setAttribute('opacity', starOpacity.toFixed(3));
-    introStarDots.forEach((star) => {
-      const base = parseFloat(star.dataset.baseR || star.getAttribute('r'));
-      const delay = parseFloat(star.dataset.delay || '0');
-      const wobble = parseFloat(star.dataset.wobble || '0.28');
-      const localRaw = clamp((t - starsStart - delay) / (INTRO.STARS_FADE * 0.9), 0, 1);
-      const local = easeInOutCubic(localRaw);
-      const settle = 1 - easeInOutCubic(clamp((nightProgress - 0.58) / 0.34, 0, 1));
-      const pulse = 0.65 + local * 0.55 + Math.sin((t * 0.6 + delay * 3)) * wobble * settle;
-      star.setAttribute('r', Math.max(0.1, base * pulse * settle).toFixed(2));
+function setupIntroStarTwinkles(){
+  if (!introStarsGroup || !introStarDots.length || !window.gsap) return;
+  introStarTweens.forEach((tween) => tween.kill());
+  introStarTweens = introStarDots.map((star) => {
+    const base = parseFloat(star.dataset.baseR || star.getAttribute('r') || '1.6');
+    const wobble = parseFloat(star.dataset.wobble || '0.2');
+    const delay = parseFloat(star.dataset.delay || '0');
+    return gsap.to(star, {
+      attr: { r: base * (1 + wobble) },
+      duration: rand(2.2, 4.6),
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+      delay,
     });
-  }
+  });
+}
 
-  if (t >= INTRO.TOTAL) {
-    endIntro();
+let introFinished = false;
+let backgroundStarted = false;
+
+function startIntroTimeline(){
+  if (introFinished) return;
+  if (!intro || !window.gsap || typeof gsap.timeline !== 'function') {
+    finalizeIntro();
     return;
   }
 
-  requestAnimationFrame(animateIntro);
+  setupIntroStarTwinkles();
+
+  gsap.set(scene, { y: 0, scale: 1, transformOrigin: '50% 42%' });
+  gsap.set(sunGroup, { transformOrigin: '50% 50%' });
+  gsap.set(clouds, { transformOrigin: '50% 50%' });
+  gsap.set([ridgeFar, ridgeMid, ridgeNear, valleyMist], { transformOrigin: '50% 100%' });
+
+  introTimeline = gsap.timeline({
+    defaults: { ease: 'power2.inOut' },
+    onComplete: finalizeIntro,
+  });
+
+  const SUNSET_DURATION = 6.4;
+  const DESCENT_DELAY = 0.65;
+  const DROP_DURATION = 3.4;
+  const FINAL_DROP_DURATION = 2.2;
+  const BACKGROUND_LEAD = 0.25;
+  const STAR_REVEAL_OFFSET = 0.3;
+  const CLOUD_DROP_OFFSET = 0.4;
+  const NIGHT_REVEAL_OFFSET = 0.2;
+  const INTRO_FADE_LEAD = 1.1;
+
+  const descentStart = SUNSET_DURATION + DESCENT_DELAY;
+  const nightRevealStart = descentStart + DROP_DURATION + NIGHT_REVEAL_OFFSET;
+  const backgroundCue = descentStart - BACKGROUND_LEAD;
+  const starRevealCue = descentStart + STAR_REVEAL_OFFSET;
+  const cloudDropCue = descentStart + CLOUD_DROP_OFFSET;
+  const textFadeCue = descentStart + 0.35;
+  const introFadeCue = nightRevealStart + INTRO_FADE_LEAD;
+  const starFadeCue = Math.max(starRevealCue + 0.6, nightRevealStart + (INTRO_FADE_LEAD - 0.8));
+
+  introTimeline.addLabel('sunsetEnd', SUNSET_DURATION);
+  introTimeline.addLabel('descent', descentStart);
+  introTimeline.addLabel('nightReveal', nightRevealStart);
+
+  if (skyZenith) introTimeline.to(skyZenith, { attr: { 'stop-color': '#2B0B3F' }, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0);
+  if (skyUpper) introTimeline.to(skyUpper, { attr: { 'stop-color': '#311460' }, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0.1);
+  if (skyMidStop) introTimeline.to(skyMidStop, { attr: { 'stop-color': '#6C2BD9' }, duration: SUNSET_DURATION + 0.2, ease: 'sine.inOut' }, 0.25);
+  if (skyHorizon) introTimeline.to(skyHorizon, { attr: { 'stop-color': '#452987' }, duration: SUNSET_DURATION + 0.3, ease: 'sine.inOut' }, 0.4);
+  if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: SUNSET_DURATION - 0.6, ease: 'sine.inOut' }, 0.8);
+  if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: SUNSET_DURATION - 0.6, ease: 'sine.inOut' }, 0.95);
+  if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: SUNSET_DURATION - 0.8, ease: 'sine.inOut' }, 1.1);
+  if (duskGlow) {
+    introTimeline.to(duskGlow, { y: 120, opacity: 0.28, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0.6);
+    introTimeline.to(duskGlow, { y: 420, opacity: 0, duration: FINAL_DROP_DURATION + 0.6, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (sunGroup) {
+    introTimeline.to(sunGroup, {
+      keyframes: [
+        { y: 120, scale: 0.9, duration: 2.6, ease: 'sine.inOut' },
+        { y: 360, scale: 0.64, duration: SUNSET_DURATION - 2.6, ease: 'power1.in' },
+      ],
+      transformOrigin: '50% 50%'
+    }, 0);
+  }
+  if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 4.8, ease: 'power1.out' }, 0.4);
+  if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 4.6, ease: 'power1.out' }, 0.7);
+  if (clouds) {
+    introTimeline.to(clouds, {
+      keyframes: [
+        { y: -28, duration: 2.8, ease: 'sine.inOut' },
+        { y: -18, duration: 2.1, ease: 'sine.inOut' },
+      ]
+    }, 0.8);
+    introTimeline.to(clouds, { y: 240, opacity: 0, duration: 2.2, ease: 'power2.in' }, cloudDropCue);
+  }
+  if (scene) {
+    introTimeline.to(scene, { y: '30%', scale: 2, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(scene, { y: '55%', scale: 4, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (ridgeFar) {
+    introTimeline.to(ridgeFar, { y: 140, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeFar, { y: 320, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (ridgeMid) {
+    introTimeline.to(ridgeMid, { y: 200, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeMid, { y: 360, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (ridgeNear) {
+    introTimeline.to(ridgeNear, { y: 260, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeNear, { y: 420, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (valleyMist) {
+    introTimeline.to(valleyMist, { y: 180, opacity: 0.46, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(valleyMist, { y: 320, opacity: 0.18, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
+  }
+  if (introText) {
+    introTimeline.to(introText, { attr: { y: '48%' }, duration: SUNSET_DURATION - 0.8, ease: 'sine.inOut' }, 0.6);
+    introTimeline.to(introText, { attr: { y: '70%', opacity: 0 }, duration: 2.4, ease: 'sine.inOut' }, textFadeCue);
+  }
+
+  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 3.8, ease: 'sine.inOut' }, starRevealCue);
+  if (celestial) introTimeline.to(celestial, { opacity: 1, duration: 4.2, ease: 'sine.inOut' }, starRevealCue + 0.4);
+  if (nebula) introTimeline.to(nebula, { opacity: 0.42, duration: 4.4, ease: 'sine.out' }, starRevealCue + 0.8);
+  introTimeline.add(() => {
+    if (!backgroundStarted) initBackground();
+  }, backgroundCue);
+  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 0, duration: 2.2, ease: 'power1.inOut' }, starFadeCue);
+  if (intro) introTimeline.to(intro, { opacity: 0, duration: 2.4, ease: 'power1.in' }, introFadeCue);
 }
 
-function endIntro(){
+function finalizeIntro(){
+  if (introFinished) return;
   introFinished = true;
-  intro.style.opacity = '0';
-  intro.classList.add('hidden');
-  // Запуск ночного фона и звёзд
+  introStarTweens.forEach((tween) => tween.kill());
+  introStarTweens = [];
+  if (introTimeline) {
+    introTimeline.kill();
+    introTimeline = null;
+  }
+  if (intro) {
+    intro.style.opacity = '0';
+    intro.classList.add('hidden');
+  }
   initBackground();
   placeFeaturedStars();
-  hint.classList.add('show');
-  hint.classList.remove('hidden');
-}
-
-// Смешивание цветов hex → hex
-function hexToRgb(hex){
-  const n = hex.replace('#','');
-  const bigint = parseInt(n, 16);
-  if (n.length === 6){
-    return [(bigint>>16)&255, (bigint>>8)&255, bigint&255];
+  if (hint) {
+    hint.classList.remove('hidden');
+    hint.classList.add('show');
   }
-  return [0,0,0];
-}
-function rgbToHex([r,g,b]){
-  const s = (n)=> n.toString(16).padStart(2,'0');
-  return '#' + s(r) + s(g) + s(b);
-}
-function mixColor(a,b,t){
-  const ra = hexToRgb(a), rb = hexToRgb(b);
-  return rgbToHex([
-    Math.round(lerp(ra[0], rb[0], t)),
-    Math.round(lerp(ra[1], rb[1], t)),
-    Math.round(lerp(ra[2], rb[2], t)),
-  ]);
 }
 
 // === НОЧНОЙ ФОН И ЗВЁЗДЫ (canvas+divs) ===
@@ -395,6 +493,7 @@ function updateDpr(){
 }
 
 function resize(){
+  updateOrientationLockState();
   updateDpr();
   const scale = dpr;
   const vw = window.innerWidth;
@@ -693,7 +792,8 @@ function genStarfield(){
         a: L.alpha[0] + Math.random()*(L.alpha[1]-L.alpha[0]),
         s: L.speed * (0.5 + Math.random()),
         tw: (0.5 + Math.random()*0.5) * twinkleScale,
-        phase: Math.random()*Math.PI*2
+        phase: Math.random()*Math.PI*2,
+        c: Math.random() < 0.35 ? '#f9ecff' : '#f2f7ff',
       });
     }
   }
@@ -712,11 +812,26 @@ function renderBackground(t){
   bgCtx.clearRect(0,0,W,H);
   // тёмный ночной градиент
   const g = bgCtx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#050b16');
-  g.addColorStop(0.55, '#081327');
-  g.addColorStop(1, '#0b1a2e');
+  g.addColorStop(0, '#160626');
+  g.addColorStop(0.45, '#2b0b3f');
+  g.addColorStop(0.72, '#3f1681');
+  g.addColorStop(1, '#14061f');
   bgCtx.fillStyle = g;
   bgCtx.fillRect(0,0,W,H);
+
+  // мягкая полоса млечного пути
+  bgCtx.save();
+  bgCtx.translate(W * 0.58, H * 0.22);
+  bgCtx.rotate(-0.32);
+  const milky = bgCtx.createRadialGradient(0, 0, 0, 0, 0, Math.max(W, H) * 0.48);
+  milky.addColorStop(0, 'rgba(255,240,255,0.25)');
+  milky.addColorStop(0.45, 'rgba(198,176,255,0.18)');
+  milky.addColorStop(1, 'rgba(120,92,180,0)');
+  bgCtx.fillStyle = milky;
+  bgCtx.globalCompositeOperation = 'lighter';
+  bgCtx.fillRect(-W, -H, W * 2, H * 2);
+  bgCtx.restore();
+  bgCtx.globalCompositeOperation = 'source-over';
 
   for(const s of starfield){
     s.phase += dt * s.tw * 2.0;
@@ -724,7 +839,7 @@ function renderBackground(t){
     bgCtx.globalAlpha = Math.max(0.05, Math.min(1, s.a*twinkle));
     bgCtx.beginPath();
     bgCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-    bgCtx.fillStyle = '#ffffff';
+    bgCtx.fillStyle = s.c;
     bgCtx.fill();
     s.x += s.s * dt * 20;
     if (s.x > W + 5) s.x = -5;
@@ -911,8 +1026,12 @@ function createHeartOutline(layout, animate = false){
   svg.setAttribute('height', height.toFixed(2));
   svg.setAttribute('viewBox', `0 0 ${width.toFixed(2)} ${height.toFixed(2)}`);
   const path = document.createElementNS(SVG_NS, 'path');
-  const commands = layout.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(' ');
-  path.setAttribute('d', `${commands} Z`);
+  const pathData = buildSmoothClosedPath(layout);
+  if (!pathData){
+    heartLineSvg = null;
+    return;
+  }
+  path.setAttribute('d', pathData);
   svg.appendChild(path);
   if (animate){
     heartLineReady = false;
@@ -1049,11 +1168,12 @@ function placeFeaturedStars(){
       const rect = star.getBoundingClientRect();
       const sparkleX = rect.left + rect.width / 2;
       const sparkleY = rect.top + rect.height / 2;
+      provideStarFeedback();
       openMemory(mem.src, mem.caption);
       sparkle(sparkleX, sparkleY);
     };
     star.addEventListener('click', () => {
-      if (panJustHappened) return;
+      if (panJustHappened || orientationLocked) return;
       open();
     });
 
@@ -1241,16 +1361,23 @@ function startAmbient(auto = false){
     return;
   }
   const { audio } = state;
+  audio.currentTime = 0;
+  const target = auto ? 0.24 : 0.32;
+  const activate = () => {
+    fadeAudioTo(audio, target, 3.2);
+    state.active = true;
+    updateAudioToggle();
+  };
   const playPromise = audio.play();
   if (playPromise && typeof playPromise.then === 'function') {
-    playPromise.catch(() => {
-      if (audioToggle) audioToggle.style.display = 'none';
+    playPromise.then(activate).catch(() => {
+      state.active = false;
+      if (audioToggle) audioToggle.classList.remove('on');
+      updateAudioToggle();
     });
+  } else {
+    activate();
   }
-  const target = auto ? 0.24 : 0.32;
-  fadeAudioTo(audio, target, 3.2);
-  state.active = true;
-  updateAudioToggle();
 }
 
 function stopAmbient(){
@@ -1300,6 +1427,12 @@ if (spaceWrapper){
   spaceWrapper.addEventListener('wheel', handleSpaceWheel, { passive: false });
 }
 
+window.addEventListener('orientationchange', () => {
+  setTimeout(updateOrientationLockState, 50);
+});
+
+updateOrientationLockState();
+
 // Инициализация после завершения интро
 function initBackground(){
   if (backgroundStarted) return;
@@ -1313,7 +1446,8 @@ function initBackground(){
 // Старт анимации интро
 initIntroStars();
 initClouds();
-requestAnimationFrame(animateIntro);
+startIntroTimeline();
+startAmbient(true);
 
 // Предзагрузка изображений
 for (const m of MEMORIES) { const img = new Image(); img.src = m.src; }

@@ -7,53 +7,83 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
   <title>Main Star</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;600;700&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="app">
     <!-- INTRO: Сцена заката → ночь -->
-    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" role="img" aria-label="вечерний горизонт">
+    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" role="img" aria-label="вечерний горизонт">
       <defs>
-        <!-- Небо: градиент от вечера к ночи (анимируется классами) -->
+        <!-- Небо: закат → сумерки → ночь -->
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="skyTop" offset="0%" stop-color="#4f7fbc"/>
-          <stop id="skyMid" offset="60%" stop-color="#9ab6e6"/>
-          <stop id="skyBot" offset="100%" stop-color="#f6c38f"/>
+          <stop id="skyZenith" offset="0%" stop-color="#FFB35C" />
+          <stop id="skyUpper" offset="42%" stop-color="#FF6E6E" />
+          <stop id="skyMid" offset="74%" stop-color="#FF7C8A" />
+          <stop id="skyHorizon" offset="100%" stop-color="#FFB35C" />
         </linearGradient>
 
-        <linearGradient id="duneGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#202c46" />
-          <stop offset="60%" stop-color="#141e33" />
-          <stop offset="100%" stop-color="#0d1525" />
+        <linearGradient id="horizonBelt" x1="0" y1="0" x2="0" y2="1">
+          <stop id="horizonTop" offset="0%" stop-color="#FFDD9F" stop-opacity="0.95" />
+          <stop id="horizonMid" offset="65%" stop-color="#FF8D90" stop-opacity="0.52" />
+          <stop id="horizonBot" offset="100%" stop-color="#FF6E6E" stop-opacity="0" />
         </linearGradient>
 
-        <linearGradient id="hillGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#131c2c" />
-          <stop offset="45%" stop-color="#0f1927" />
-          <stop offset="100%" stop-color="#0a1220" />
+        <linearGradient id="ridgeFarGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#3f1b63" />
+          <stop offset="100%" stop-color="#22113a" />
         </linearGradient>
 
-        <!-- Сумеречное свечение у горизонта -->
-        <linearGradient id="horizonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop id="horizonTop" offset="0%" stop-color="#f3c27f" stop-opacity="0.92" />
-          <stop id="horizonMid" offset="55%" stop-color="#6b4c7c" stop-opacity="0.48" />
-          <stop id="horizonBot" offset="100%" stop-color="#08101c" stop-opacity="0" />
+        <linearGradient id="ridgeMidGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#2c1244" />
+          <stop offset="100%" stop-color="#140825" />
         </linearGradient>
 
-        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#131b2a" />
-          <stop offset="100%" stop-color="#060b16" />
+        <linearGradient id="ridgeNearGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#180a25" />
+          <stop offset="100%" stop-color="#07030d" />
         </linearGradient>
 
-        <!-- Солнечный диск с мягким свечением -->
-        <radialGradient id="sunGrad" r="60%" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#fff6c0" stop-opacity="1"/>
-          <stop offset="60%" stop-color="#ffd27a" stop-opacity="0.85"/>
-          <stop offset="100%" stop-color="#ff9a3c" stop-opacity="0"/>
+        <linearGradient id="valleyHaze" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffb35c" stop-opacity="0.32" />
+          <stop offset="45%" stop-color="#ff6e6e" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#2b0b3f" stop-opacity="0" />
+        </linearGradient>
+
+        <radialGradient id="sunGrad" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stop-color="#fff7d6" stop-opacity="1" />
+          <stop offset="55%" stop-color="#ffd27a" stop-opacity="0.82" />
+          <stop offset="100%" stop-color="#ff8d4a" stop-opacity="0" />
         </radialGradient>
 
-        <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3"/>
+        <radialGradient id="sunAura" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stop-color="#ffeca8" stop-opacity="0.8" />
+          <stop offset="100%" stop-color="#ffb35c" stop-opacity="0" />
+        </radialGradient>
+
+        <linearGradient id="milkyGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#d8d6ff" stop-opacity="0.04" />
+          <stop offset="50%" stop-color="#f3edff" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="#d2d0ff" stop-opacity="0.04" />
+        </linearGradient>
+
+        <radialGradient id="nebulaGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#6c2bd9" stop-opacity="0.5" />
+          <stop offset="60%" stop-color="#432297" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#2b0b3f" stop-opacity="0" />
+        </radialGradient>
+
+        <filter id="softBlur" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="4" />
+        </filter>
+
+        <filter id="milkyBlur" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="18" />
         </filter>
       </defs>
 
@@ -61,43 +91,56 @@
         <!-- Небо -->
         <rect id="sky" x="0" y="0" width="100%" height="100%" fill="url(#skyGrad)"></rect>
 
+        <path id="duskGlow" d="M-30 560 C 140 520 250 520 420 560 V720 H-30 Z" fill="url(#horizonBelt)" opacity="0.9"></path>
+
+        <!-- Млечный путь и туманность -->
+        <g id="celestial" opacity="0">
+          <path
+            id="milkyWay"
+            d="M-40 120 C 60 60 180 20 320 80 C 410 120 470 220 430 300 C 390 380 260 420 160 400 C 60 380 -10 320 -40 240 Z"
+            fill="url(#milkyGrad)"
+            filter="url(#milkyBlur)"
+          ></path>
+          <ellipse id="nebula" cx="260" cy="210" rx="120" ry="80" fill="url(#nebulaGrad)" opacity="0.15"></ellipse>
+        </g>
+
         <!-- Солнце -->
         <g id="sunGroup">
-          <circle id="sun" cx="195" cy="560" r="58" fill="url(#sunGrad)" />
+          <circle id="sunHalo" cx="210" cy="560" r="110" fill="url(#sunAura)" opacity="0.8"></circle>
+          <circle id="sun" cx="210" cy="560" r="64" fill="url(#sunGrad)" />
         </g>
 
-        <!-- Пара лёгких облаков -->
-        <!-- Облака наполняются скриптом для небольших, случайных форм -->
+        <!-- Облака формируются скриптом -->
         <g id="clouds" filter="url(#softBlur)"></g>
 
-        <!-- Звёзды ночного неба (постепенно проявляются) -->
-        <g id="introStars" opacity="0" fill="#f7fbff">
-          <circle cx="58" cy="150" r="1.3" data-base-r="1.3" />
-          <circle cx="124" cy="108" r="1.7" data-base-r="1.7" />
-          <circle cx="198" cy="88" r="1.2" data-base-r="1.2" />
-          <circle cx="308" cy="136" r="1.5" data-base-r="1.5" />
-          <circle cx="246" cy="198" r="1.3" data-base-r="1.3" />
-          <circle cx="86" cy="212" r="1.6" data-base-r="1.6" />
-          <circle cx="166" cy="176" r="1.35" data-base-r="1.35" />
-          <circle cx="292" cy="78" r="1.2" data-base-r="1.2" />
-          <circle cx="36" cy="110" r="1.05" data-base-r="1.05" />
-          <circle cx="348" cy="190" r="1.3" data-base-r="1.3" />
+        <!-- Звёзды, которые проявятся ночью -->
+        <g id="introStars" opacity="0" fill="#fefbff">
+          <circle cx="42" cy="150" r="1.6" data-base-r="1.6" />
+          <circle cx="120" cy="108" r="2.1" data-base-r="2.1" />
+          <circle cx="210" cy="82" r="1.5" data-base-r="1.5" />
+          <circle cx="320" cy="140" r="1.9" data-base-r="1.9" />
+          <circle cx="256" cy="198" r="1.7" data-base-r="1.7" />
+          <circle cx="96" cy="214" r="2.2" data-base-r="2.2" />
+          <circle cx="170" cy="176" r="1.8" data-base-r="1.8" />
+          <circle cx="302" cy="72" r="1.6" data-base-r="1.6" />
+          <circle cx="26" cy="118" r="1.4" data-base-r="1.4" />
+          <circle cx="344" cy="198" r="1.8" data-base-r="1.8" />
+          <circle cx="184" cy="126" r="1.6" data-base-r="1.6" />
+          <circle cx="278" cy="186" r="1.5" data-base-r="1.5" />
         </g>
 
-        <!-- Земля/горизонт -->
-        <g id="ground">
-          <path id="groundBase" d="M-18,656 C 60,610 156,598 254,618 C 318,631 374,658 404,690 V844 H-18 Z" fill="url(#groundGrad)"/>
-          <path id="horizonGlow" d="M-24,606 C 60,568 174,562 288,580 C 342,589 382,606 410,632 V752 H-24 Z" fill="url(#horizonGrad)" opacity="0.92"/>
-          <!-- Дальний горизонт (силуэты холмов) -->
-          <path d="M-36,664 C 42,620 148,606 240,620 C 314,632 370,656 414,694 V844 H-36 Z"
-                fill="url(#duneGrad)"/>
-          <path d="M-30,710 C 52,662 168,654 272,680 C 332,696 394,722 424,760 V844 H-30 Z" fill="url(#hillGrad)"/>
+        <!-- Силуэты гор -->
+        <g id="mountains">
+          <path id="ridgeFar" d="M-50 640 C 80 560 210 520 360 560 C 440 580 470 640 480 720 V844 H-50 Z" fill="url(#ridgeFarGrad)" opacity="0.92"></path>
+          <path id="ridgeMid" d="M-40 700 C 120 640 250 660 420 720 C 470 740 520 780 520 844 H-60 Z" fill="url(#ridgeMidGrad)" opacity="0.9"></path>
+          <path id="ridgeNear" d="M-70 770 C 60 730 220 760 420 790 C 470 798 520 820 520 844 H-80 Z" fill="url(#ridgeNearGrad)" opacity="0.94"></path>
+          <path id="valleyMist" d="M-60 690 C 60 660 260 650 420 700 L 420 844 H-60 Z" fill="url(#valleyHaze)" opacity="0.5"></path>
         </g>
 
         <!-- Текст-приглашение -->
-        <text id="introText" x="50%" y="58%" text-anchor="middle" fill="#ffffff" opacity="0.9"
-              style="font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Arial;">
-          Смотри, как день становится ночью…
+        <text id="introText" x="50%" y="56%" text-anchor="middle" opacity="0.96" dominant-baseline="middle">
+          <tspan x="50%" dy="0">Смотри, как вечер</tspan>
+          <tspan x="50%" dy="1.4em">плавно становится ночью…</tspan>
         </text>
       </g>
     </svg>
@@ -123,12 +166,25 @@
     <canvas id="fx"></canvas>
 
     <!-- Подсказка -->
-    <div id="hint" class="hidden">Найди и коснись мерцающих звёзд ✨</div>
+    <div id="hint" class="hidden">Найди и коснись мерцающих звёзд✨</div>
 
     <!-- Переключатель звука -->
     <button id="audioToggle" class="audio-toggle" aria-label="Включить атмосферный звук" aria-pressed="false">🔈</button>
+
+    <!-- Блокировка ориентации -->
+    <div
+      id="orientationLock"
+      class="orientation-lock"
+      role="alert"
+      aria-live="assertive"
+      aria-hidden="true"
+    >
+      Пожалуйста,
+      поверните устройство вертикально, чтобы продолжить путешествие среди звёзд.
+    </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
