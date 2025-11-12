@@ -344,44 +344,24 @@ function startIntroTimeline(){
   if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 5.6, ease: 'power1.out' }, 0.6);
   if (clouds) introTimeline.to(clouds, { y: 200, opacity: 0, duration: 8.4, ease: 'sine.inOut' }, 0.8);
   if (scene) {
-    introTimeline.to(scene, {
-      keyframes: [
-        { y: 180, scale: 1.08, duration: 4.4, ease: 'sine.inOut' },
-        { y: 420, scale: 1.24, duration: 5.8, ease: 'power2.inOut' }
-      ],
-    }, 1.2);
+    introTimeline.to(scene, { y: 120, scale: 1.06, duration: 3.6, ease: 'sine.inOut' }, 1.2);
+    introTimeline.to(scene, { y: 420, scale: 1.24, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
   }
   if (ridgeFar) {
-    introTimeline.to(ridgeFar, {
-      keyframes: [
-        { y: 120, duration: 4.4, ease: 'sine.inOut' },
-        { y: 220, duration: 5.8, ease: 'power2.inOut' }
-      ],
-    }, 1.2);
+    introTimeline.to(ridgeFar, { y: 80, duration: 3.6, ease: 'sine.inOut' }, 1.2);
+    introTimeline.to(ridgeFar, { y: 220, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
   }
   if (ridgeMid) {
-    introTimeline.to(ridgeMid, {
-      keyframes: [
-        { y: 180, duration: 4.4, ease: 'sine.inOut' },
-        { y: 280, duration: 5.8, ease: 'power2.inOut' }
-      ],
-    }, 1.2);
+    introTimeline.to(ridgeMid, { y: 140, duration: 3.6, ease: 'sine.inOut' }, 1.2);
+    introTimeline.to(ridgeMid, { y: 280, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
   }
   if (ridgeNear) {
-    introTimeline.to(ridgeNear, {
-      keyframes: [
-        { y: 240, duration: 4.4, ease: 'sine.inOut' },
-        { y: 340, duration: 5.8, ease: 'power2.inOut' }
-      ],
-    }, 1.2);
+    introTimeline.to(ridgeNear, { y: 200, duration: 3.6, ease: 'sine.inOut' }, 1.2);
+    introTimeline.to(ridgeNear, { y: 340, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
   }
   if (valleyMist) {
-    introTimeline.to(valleyMist, {
-      keyframes: [
-        { y: 180, opacity: 0.48, duration: 4.4, ease: 'sine.inOut' },
-        { y: 280, opacity: 0.34, duration: 5.8, ease: 'power2.inOut' }
-      ],
-    }, 1.2);
+    introTimeline.to(valleyMist, { y: 160, opacity: 0.5, duration: 3.6, ease: 'sine.inOut' }, 1.2);
+    introTimeline.to(valleyMist, { y: 280, opacity: 0.34, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
   }
   if (introText) introTimeline.to(introText, { attr: { y: '48%' }, duration: 7.2, ease: 'sine.inOut' }, 1.4);
 
