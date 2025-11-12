@@ -323,58 +323,93 @@ function startIntroTimeline(){
     onComplete: finalizeIntro,
   });
 
-  if (skyZenith) introTimeline.to(skyZenith, { attr: { 'stop-color': '#2B0B3F' }, duration: 9.6, ease: 'sine.inOut' }, 0);
-  if (skyUpper) introTimeline.to(skyUpper, { attr: { 'stop-color': '#311460' }, duration: 9.6, ease: 'sine.inOut' }, 0.1);
-  if (skyMidStop) introTimeline.to(skyMidStop, { attr: { 'stop-color': '#6C2BD9' }, duration: 9.8, ease: 'sine.inOut' }, 0.3);
-  if (skyHorizon) introTimeline.to(skyHorizon, { attr: { 'stop-color': '#452987' }, duration: 9.8, ease: 'sine.inOut' }, 0.5);
-  if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: 8.8, ease: 'sine.inOut' }, 0.8);
-  if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: 8.8, ease: 'sine.inOut' }, 0.9);
-  if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: 8.4, ease: 'sine.inOut' }, 1);
-  if (duskGlow) introTimeline.to(duskGlow, { y: 240, opacity: 0.18, duration: 9.4, ease: 'power1.inOut' }, 0.6);
+  const SUNSET_DURATION = 6.4;
+  const DESCENT_DELAY = 0.65;
+  const DROP_DURATION = 3.4;
+  const FINAL_DROP_DURATION = 2.2;
+  const BACKGROUND_LEAD = 0.25;
+  const STAR_REVEAL_OFFSET = 0.3;
+  const CLOUD_DROP_OFFSET = 0.4;
+  const NIGHT_REVEAL_OFFSET = 0.2;
+  const INTRO_FADE_LEAD = 1.1;
+
+  const descentStart = SUNSET_DURATION + DESCENT_DELAY;
+  const nightRevealStart = descentStart + DROP_DURATION + NIGHT_REVEAL_OFFSET;
+  const backgroundCue = descentStart - BACKGROUND_LEAD;
+  const starRevealCue = descentStart + STAR_REVEAL_OFFSET;
+  const cloudDropCue = descentStart + CLOUD_DROP_OFFSET;
+  const textFadeCue = descentStart + 0.35;
+  const introFadeCue = nightRevealStart + INTRO_FADE_LEAD;
+  const starFadeCue = Math.max(starRevealCue + 0.6, nightRevealStart + (INTRO_FADE_LEAD - 0.8));
+
+  introTimeline.addLabel('sunsetEnd', SUNSET_DURATION);
+  introTimeline.addLabel('descent', descentStart);
+  introTimeline.addLabel('nightReveal', nightRevealStart);
+
+  if (skyZenith) introTimeline.to(skyZenith, { attr: { 'stop-color': '#2B0B3F' }, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0);
+  if (skyUpper) introTimeline.to(skyUpper, { attr: { 'stop-color': '#311460' }, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0.1);
+  if (skyMidStop) introTimeline.to(skyMidStop, { attr: { 'stop-color': '#6C2BD9' }, duration: SUNSET_DURATION + 0.2, ease: 'sine.inOut' }, 0.25);
+  if (skyHorizon) introTimeline.to(skyHorizon, { attr: { 'stop-color': '#452987' }, duration: SUNSET_DURATION + 0.3, ease: 'sine.inOut' }, 0.4);
+  if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: SUNSET_DURATION - 0.6, ease: 'sine.inOut' }, 0.8);
+  if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: SUNSET_DURATION - 0.6, ease: 'sine.inOut' }, 0.95);
+  if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: SUNSET_DURATION - 0.8, ease: 'sine.inOut' }, 1.1);
+  if (duskGlow) {
+    introTimeline.to(duskGlow, { y: 120, opacity: 0.28, duration: SUNSET_DURATION, ease: 'sine.inOut' }, 0.6);
+    introTimeline.to(duskGlow, { y: 420, opacity: 0, duration: FINAL_DROP_DURATION + 0.6, ease: 'power2.in' }, 'nightReveal');
+  }
   if (sunGroup) {
     introTimeline.to(sunGroup, {
       keyframes: [
-        { y: 120, scale: 0.88, duration: 2.8, ease: 'sine.inOut' },
-        { y: 320, scale: 0.6, duration: 6.6, ease: 'power1.in' }
+        { y: 120, scale: 0.9, duration: 2.6, ease: 'sine.inOut' },
+        { y: 360, scale: 0.64, duration: SUNSET_DURATION - 2.6, ease: 'power1.in' },
       ],
       transformOrigin: '50% 50%'
     }, 0);
   }
-  if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 5.8, ease: 'power1.out' }, 0.4);
-  if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 5.6, ease: 'power1.out' }, 0.6);
-  if (clouds) introTimeline.to(clouds, { y: 200, opacity: 0, duration: 8.4, ease: 'sine.inOut' }, 0.8);
+  if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 4.8, ease: 'power1.out' }, 0.4);
+  if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 4.6, ease: 'power1.out' }, 0.7);
+  if (clouds) {
+    introTimeline.to(clouds, {
+      keyframes: [
+        { y: -28, duration: 2.8, ease: 'sine.inOut' },
+        { y: -18, duration: 2.1, ease: 'sine.inOut' },
+      ]
+    }, 0.8);
+    introTimeline.to(clouds, { y: 240, opacity: 0, duration: 2.2, ease: 'power2.in' }, cloudDropCue);
+  }
   if (scene) {
-    introTimeline.to(scene, { y: 120, scale: 1.06, duration: 3.6, ease: 'sine.inOut' }, 1.2);
-    introTimeline.to(scene, { y: 420, scale: 1.24, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
+    introTimeline.to(scene, { y: 320, scale: 1.14, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(scene, { y: 560, scale: 1.28, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
   if (ridgeFar) {
-    introTimeline.to(ridgeFar, { y: 80, duration: 3.6, ease: 'sine.inOut' }, 1.2);
-    introTimeline.to(ridgeFar, { y: 220, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
+    introTimeline.to(ridgeFar, { y: 140, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeFar, { y: 320, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
   if (ridgeMid) {
-    introTimeline.to(ridgeMid, { y: 140, duration: 3.6, ease: 'sine.inOut' }, 1.2);
-    introTimeline.to(ridgeMid, { y: 280, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
+    introTimeline.to(ridgeMid, { y: 200, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeMid, { y: 360, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
   if (ridgeNear) {
-    introTimeline.to(ridgeNear, { y: 200, duration: 3.6, ease: 'sine.inOut' }, 1.2);
-    introTimeline.to(ridgeNear, { y: 340, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
+    introTimeline.to(ridgeNear, { y: 260, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(ridgeNear, { y: 420, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
   if (valleyMist) {
-    introTimeline.to(valleyMist, { y: 160, opacity: 0.5, duration: 3.6, ease: 'sine.inOut' }, 1.2);
-    introTimeline.to(valleyMist, { y: 280, opacity: 0.34, duration: 5.8, ease: 'power2.inOut' }, 'twilight+=0.1');
+    introTimeline.to(valleyMist, { y: 180, opacity: 0.46, duration: DROP_DURATION, ease: 'sine.inOut' }, 'descent');
+    introTimeline.to(valleyMist, { y: 320, opacity: 0.18, duration: FINAL_DROP_DURATION, ease: 'power2.in' }, 'nightReveal');
   }
-  if (introText) introTimeline.to(introText, { attr: { y: '48%' }, duration: 7.2, ease: 'sine.inOut' }, 1.4);
+  if (introText) {
+    introTimeline.to(introText, { attr: { y: '48%' }, duration: SUNSET_DURATION - 0.8, ease: 'sine.inOut' }, 0.6);
+    introTimeline.to(introText, { attr: { opacity: 0 }, duration: 2.4, ease: 'sine.inOut' }, textFadeCue);
+  }
 
-  introTimeline.addLabel('twilight', 4.4);
-  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 4.4, ease: 'sine.inOut' }, 'twilight');
-  if (celestial) introTimeline.to(celestial, { opacity: 1, duration: 5.4, ease: 'sine.inOut' }, 'twilight+=0.4');
-  if (nebula) introTimeline.to(nebula, { opacity: 0.42, duration: 5.6, ease: 'sine.out' }, 'twilight+=0.6');
+  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 3.8, ease: 'sine.inOut' }, starRevealCue);
+  if (celestial) introTimeline.to(celestial, { opacity: 1, duration: 4.2, ease: 'sine.inOut' }, starRevealCue + 0.4);
+  if (nebula) introTimeline.to(nebula, { opacity: 0.42, duration: 4.4, ease: 'sine.out' }, starRevealCue + 0.8);
   introTimeline.add(() => {
     if (!backgroundStarted) initBackground();
-  }, 'twilight+=2.8');
-  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 0, duration: 2.4, ease: 'power1.inOut' }, 'twilight+=6.4');
-  if (introText) introTimeline.to(introText, { attr: { opacity: 0 }, duration: 3, ease: 'sine.inOut' }, 'twilight+=5.6');
-  if (intro) introTimeline.to(intro, { opacity: 0, duration: 2.4, ease: 'power1.in' }, 'twilight+=7.2');
+  }, backgroundCue);
+  if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 0, duration: 2.2, ease: 'power1.inOut' }, starFadeCue);
+  if (intro) introTimeline.to(intro, { opacity: 0, duration: 2.4, ease: 'power1.in' }, introFadeCue);
 }
 
 function finalizeIntro(){
