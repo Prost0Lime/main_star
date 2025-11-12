@@ -54,6 +54,9 @@ const introStarsGroup = document.getElementById('introStars');
 let introStarDots = [];
 const introText = document.getElementById('introText');
 
+const INTRO_BASE_WIDTH = 390;
+const INTRO_BASE_HEIGHT = 844;
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const bg = document.getElementById('bg');
@@ -121,6 +124,39 @@ function updateOrientationLockState(){
   if (orientationLock){
     orientationLock.setAttribute('aria-hidden', shouldLock ? 'false' : 'true');
   }
+}
+
+function updateIntroViewBox(vw = window.innerWidth, vh = window.innerHeight){
+  if (!intro){
+    return;
+  }
+  const width = Number.isFinite(vw) && vw > 0 ? vw : window.innerWidth || INTRO_BASE_WIDTH;
+  const height = Number.isFinite(vh) && vh > 0 ? vh : window.innerHeight || INTRO_BASE_HEIGHT;
+  if (!width || !height){
+    intro.setAttribute('viewBox', `0 0 ${INTRO_BASE_WIDTH} ${INTRO_BASE_HEIGHT}`);
+    return;
+  }
+  const containerRatio = height / width;
+  const baseRatio = INTRO_BASE_HEIGHT / INTRO_BASE_WIDTH;
+  let viewWidth = INTRO_BASE_WIDTH;
+  let viewHeight = INTRO_BASE_HEIGHT;
+  let minX = 0;
+  let minY = 0;
+
+  if (Number.isFinite(containerRatio) && containerRatio > 0){
+    if (containerRatio > baseRatio){
+      viewHeight = INTRO_BASE_WIDTH * containerRatio;
+      minY = -(viewHeight - INTRO_BASE_HEIGHT) / 2;
+    } else if (containerRatio < baseRatio){
+      viewWidth = INTRO_BASE_HEIGHT / containerRatio;
+      minX = -(viewWidth - INTRO_BASE_WIDTH) / 2;
+    }
+  }
+
+  intro.setAttribute(
+    'viewBox',
+    `${minX.toFixed(2)} ${minY.toFixed(2)} ${viewWidth.toFixed(2)} ${viewHeight.toFixed(2)}`
+  );
 }
 
 function ensureTapAudioContext(){
@@ -498,6 +534,7 @@ function resize(){
   const scale = dpr;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  updateIntroViewBox(vw, vh);
   const prevMaxX = maxViewX;
   const prevMaxY = maxViewY;
   const prevWidth = spaceWidth;
@@ -1428,10 +1465,14 @@ if (spaceWrapper){
 }
 
 window.addEventListener('orientationchange', () => {
-  setTimeout(updateOrientationLockState, 50);
+  setTimeout(() => {
+    updateOrientationLockState();
+    updateIntroViewBox();
+  }, 50);
 });
 
 updateOrientationLockState();
+updateIntroViewBox();
 
 // Инициализация после завершения интро
 function initBackground(){
