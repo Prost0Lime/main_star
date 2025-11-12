@@ -1,11 +1,11 @@
 *{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:radial-gradient(circle at 50% 15%,#221238 0%,#090513 65%,#05040e 100%);color:#fff;font-family:'Comfortaa',-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:radial-gradient(circle at 50% 15%,#221238 0%,#090513 65%,#05040e 100%);color:#fff;font-family:'Caveat',-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 #app{position:relative;width:100vw;height:100vh;min-height:100vh}
 @supports (height: 100svh){#app{height:100svh;min-height:100svh}}
 @supports (height: 100dvh){#app{height:100dvh;min-height:100dvh}}
 
 /* INTRO */
-#intro{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:5;transition:opacity 1.4s ease;will-change:opacity}
+#intro{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:hidden;z-index:5;transition:opacity 1.4s ease;will-change:opacity}
 #intro.hidden{opacity:0;pointer-events:none}
 #scene{transform-box:fill-box;transform-origin:50% 72%}
 #sunGroup{transform-box:fill-box;transform-origin:50% 50%}
@@ -13,7 +13,7 @@ body{margin:0;background:radial-gradient(circle at 50% 15%,#221238 0%,#090513 65
 #mountains{transform-box:fill-box;transform-origin:50% 100%}
 #celestial{mix-blend-mode:screen}
 #sunHalo{mix-blend-mode:screen}
-#introText{font-family:'Comfortaa',sans-serif;font-size:clamp(15px,calc(1.15vw + 1.1vh),26px);--intro-letter:clamp(.12em,calc(.04em + .28vw),.22em);letter-spacing:var(--intro-letter);text-transform:uppercase;fill:#ffe4f9;animation:introTextGlow 6.4s ease-in-out infinite;paint-order:stroke fill;stroke:#ffffff10;stroke-width:.4px}
+#introText{font-family: "Caveat", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;font-size:clamp(15px,calc(1.15vw + 1.1vh),26px);letter-spacing:var(--intro-letter);text-transform:uppercase;fill:#ffe4f9;animation:introTextGlow 6.4s ease-in-out infinite;paint-order:stroke fill;stroke:#ffffff10;stroke-width:.4px}
 #introText tspan{white-space:pre;dominant-baseline:middle}
 @media (max-width:480px){#introText{font-size:clamp(14px,4.4vw,20px);--intro-letter:clamp(.1em,calc(.05em + .2vw),.18em)}}
 @media (orientation:landscape){#introText{font-size:clamp(14px,2.4vh,20px);--intro-letter:clamp(.1em,calc(.05em + .18vw),.18em)}}
