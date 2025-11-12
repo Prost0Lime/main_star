@@ -140,16 +140,22 @@ function playStarTapSound(){
   const now = ctx.currentTime;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(640, now);
-  osc.frequency.exponentialRampToValueAtTime(420, now + 0.2);
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle';
+  const baseFrequency = 783.99; // нота, напоминающая мягкий звон арфы
+  osc.frequency.setValueAtTime(baseFrequency, now);
+  osc.frequency.exponentialRampToValueAtTime(baseFrequency * 0.92, now + 0.24);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(2600, now);
+  filter.Q.setValueAtTime(18, now);
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.16, now + 0.025);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
-  osc.connect(gain);
+  gain.gain.linearRampToValueAtTime(0.18, now + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+  osc.connect(filter);
+  filter.connect(gain);
   gain.connect(ctx.destination);
   osc.start(now);
-  osc.stop(now + 0.36);
+  osc.stop(now + 0.62);
 }
 
 function triggerStarHaptics(){
