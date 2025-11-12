@@ -18,7 +18,7 @@
 <body>
   <div id="app">
     <!-- INTRO: Сцена заката → ночь -->
-    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" role="img" aria-label="вечерний горизонт">
+    <svg id="intro" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet" role="img" aria-label="вечерний горизонт">
       <defs>
         <!-- Небо: закат → сумерки → ночь -->
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
@@ -138,8 +138,9 @@
         </g>
 
         <!-- Текст-приглашение -->
-        <text id="introText" x="50%" y="58%" text-anchor="middle" opacity="0.96">
-          Смотри, как вечер плавно становится ночью…
+        <text id="introText" x="50%" y="56%" text-anchor="middle" opacity="0.96" dominant-baseline="middle">
+          <tspan x="50%" dy="0">Смотри, как вечер</tspan>
+          <tspan x="50%" dy="1.4em">плавно становится ночью…</tspan>
         </text>
       </g>
     </svg>

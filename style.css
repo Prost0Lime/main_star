@@ -13,9 +13,12 @@ body{margin:0;background:radial-gradient(circle at 50% 15%,#221238 0%,#090513 65
 #mountains{transform-box:fill-box;transform-origin:50% 100%}
 #celestial{mix-blend-mode:screen}
 #sunHalo{mix-blend-mode:screen}
-#introText{font-family:'Poiret One','Manrope',sans-serif;font-size:18px;letter-spacing:.22em;text-transform:uppercase;fill:#ffe4f9;animation:introTextGlow 6.4s ease-in-out infinite;paint-order:stroke fill;stroke:#ffffff10;stroke-width:.4px}
+#introText{font-family:'Poiret One','Manrope',sans-serif;font-size:clamp(15px,calc(1.15vw + 1.1vh),26px);--intro-letter:clamp(.12em,calc(.04em + .28vw),.22em);letter-spacing:var(--intro-letter);text-transform:uppercase;fill:#ffe4f9;animation:introTextGlow 6.4s ease-in-out infinite;paint-order:stroke fill;stroke:#ffffff10;stroke-width:.4px}
+#introText tspan{white-space:pre;dominant-baseline:middle}
+@media (max-width:480px){#introText{font-size:clamp(14px,4.4vw,20px);--intro-letter:clamp(.1em,calc(.05em + .2vw),.18em)}}
+@media (orientation:landscape){#introText{font-size:clamp(14px,2.4vh,20px);--intro-letter:clamp(.1em,calc(.05em + .18vw),.18em)}}
 
-@keyframes introTextGlow{0%,100%{fill:#ffe6f9;stroke:#ffffff10;opacity:.9;letter-spacing:.22em}50%{fill:#fff6ff;stroke:#ffe4ff33;opacity:1;letter-spacing:.26em}}
+@keyframes introTextGlow{0%,100%{fill:#ffe6f9;stroke:#ffffff10;opacity:.9;letter-spacing:var(--intro-letter)}50%{fill:#fff6ff;stroke:#ffe4ff33;opacity:1;letter-spacing:calc(var(--intro-letter) + .04em)}}
 
 /* Пост-интро слои */
 #space-wrapper{position:absolute;inset:0;overflow:hidden;z-index:1;touch-action:none;cursor:grab}

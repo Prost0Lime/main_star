@@ -145,6 +145,35 @@ const CONSTELLATION_EDGES = [
   [3, 12],
 ];
 
+function buildSmoothClosedPath(points, tension = 0.55){
+  const count = points.length;
+  if (count === 0) return '';
+  if (count === 1){
+    const { x, y } = points[0];
+    const xStr = x.toFixed(2);
+    const yStr = y.toFixed(2);
+    return `M ${xStr} ${yStr} Z`;
+  }
+  if (count === 2){
+    const a = points[0];
+    const b = points[1];
+    return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} L ${b.x.toFixed(2)} ${b.y.toFixed(2)} Z`;
+  }
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < count; i++){
+    const p0 = points[(i - 1 + count) % count];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % count];
+    const p3 = points[(i + 2) % count];
+    const cp1x = p1.x + ((p2.x - p0.x) * tension) / 6;
+    const cp1y = p1.y + ((p2.y - p0.y) * tension) / 6;
+    const cp2x = p2.x - ((p3.x - p1.x) * tension) / 6;
+    const cp2y = p2.y - ((p3.y - p1.y) * tension) / 6;
+    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return `${path} Z`;
+}
+
 function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
 
 function rand(min, max) {
@@ -230,7 +259,7 @@ function startIntroTimeline(){
 
   setupIntroStarTwinkles();
 
-  gsap.set(scene, { y: 0, scale: 1, transformOrigin: '50% 72%' });
+  gsap.set(scene, { y: 0, scale: 1, transformOrigin: '50% 42%' });
   gsap.set(sunGroup, { transformOrigin: '50% 50%' });
   gsap.set(clouds, { transformOrigin: '50% 50%' });
   gsap.set([ridgeFar, ridgeMid, ridgeNear, valleyMist], { transformOrigin: '50% 100%' });
@@ -247,16 +276,17 @@ function startIntroTimeline(){
   if (horizonTop) introTimeline.to(horizonTop, { attr: { 'stop-color': '#f7d1ff', 'stop-opacity': 0.46 }, duration: 7.2 }, 0.8);
   if (horizonMid) introTimeline.to(horizonMid, { attr: { 'stop-color': '#6c2bd9', 'stop-opacity': 0.24 }, duration: 7.2 }, 0.9);
   if (horizonBot) introTimeline.to(horizonBot, { attr: { 'stop-opacity': 0 }, duration: 6.8 }, 1);
-  if (duskGlow) introTimeline.to(duskGlow, { opacity: 0.28, duration: 6.6 }, 1.2);
-  if (sunGroup) introTimeline.to(sunGroup, { y: 220, scale: 0.7, duration: 6.4, ease: 'power1.in' }, 0);
+  if (duskGlow) introTimeline.to(duskGlow, { y: 220, opacity: 0.22, duration: 7.2 }, 1);
+  if (sunGroup) introTimeline.to(sunGroup, { y: 260, scale: 0.66, duration: 6.4, ease: 'power1.in' }, 0);
   if (sunHalo) introTimeline.to(sunHalo, { opacity: 0, duration: 5.4, ease: 'power1.out' }, 0.4);
   if (sun) introTimeline.to(sun, { attr: { opacity: 0 }, duration: 5.2, ease: 'power1.out' }, 0.6);
-  if (clouds) introTimeline.to(clouds, { y: -120, opacity: 0, duration: 6.4, ease: 'sine.inOut' }, 0.4);
-  if (scene) introTimeline.to(scene, { y: -340, scale: 1.24, duration: 9.2 }, 1.6);
-  if (ridgeFar) introTimeline.to(ridgeFar, { y: -40, duration: 9.2 }, 1.6);
-  if (ridgeMid) introTimeline.to(ridgeMid, { y: -68, duration: 9.2 }, 1.6);
-  if (ridgeNear) introTimeline.to(ridgeNear, { y: -102, duration: 9.2 }, 1.6);
-  if (valleyMist) introTimeline.to(valleyMist, { y: -52, opacity: 0.32, duration: 9.2 }, 1.6);
+  if (clouds) introTimeline.to(clouds, { y: 200, opacity: 0, duration: 7, ease: 'sine.inOut' }, 0.4);
+  if (scene) introTimeline.to(scene, { y: 420, scale: 1.28, duration: 9.6, ease: 'sine.inOut' }, 1.4);
+  if (ridgeFar) introTimeline.to(ridgeFar, { y: 200, duration: 9.6, ease: 'sine.inOut' }, 1.4);
+  if (ridgeMid) introTimeline.to(ridgeMid, { y: 260, duration: 9.6, ease: 'sine.inOut' }, 1.4);
+  if (ridgeNear) introTimeline.to(ridgeNear, { y: 320, duration: 9.6, ease: 'sine.inOut' }, 1.4);
+  if (valleyMist) introTimeline.to(valleyMist, { y: 260, opacity: 0.34, duration: 9.6, ease: 'sine.inOut' }, 1.4);
+  if (introText) introTimeline.to(introText, { attr: { y: '48%' }, duration: 6.6, ease: 'sine.inOut' }, 1.2);
 
   introTimeline.addLabel('twilight', 4.4);
   if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 4.4, ease: 'sine.inOut' }, 'twilight');
@@ -877,8 +907,12 @@ function createHeartOutline(layout, animate = false){
   svg.setAttribute('height', height.toFixed(2));
   svg.setAttribute('viewBox', `0 0 ${width.toFixed(2)} ${height.toFixed(2)}`);
   const path = document.createElementNS(SVG_NS, 'path');
-  const commands = layout.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(' ');
-  path.setAttribute('d', `${commands} Z`);
+  const pathData = buildSmoothClosedPath(layout);
+  if (!pathData){
+    heartLineSvg = null;
+    return;
+  }
+  path.setAttribute('d', pathData);
   svg.appendChild(path);
   if (animate){
     heartLineReady = false;
