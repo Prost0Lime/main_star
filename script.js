@@ -71,6 +71,11 @@ const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)')
 const smallViewport = Math.max(window.innerWidth, window.innerHeight) <= 900;
 const lowPowerMode = coarsePointer || smallViewport;
 
+// NEW: помечаем режим экономии
+if (lowPowerMode) {
+  document.documentElement.classList.add('low-power');
+}
+
 const MAX_DPR = lowPowerMode ? 1.3 : 2;
 let dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
 
@@ -845,7 +850,9 @@ function renderBackground(t){
     if (s.x > W + 5) s.x = -5;
   }
   bgCtx.globalAlpha = 1;
-  requestAnimationFrame(renderBackground);
+  if (!lowPowerMode) {
+    requestAnimationFrame(renderBackground);
+  }
 }
 
 function buildConstellationLayout(width, height){
@@ -1439,8 +1446,14 @@ function initBackground(){
   backgroundStarted = true;
   window.addEventListener('resize', resize, {passive:true});
   resize();
-  requestAnimationFrame(renderBackground);
-  requestAnimationFrame(renderFx);
+// NEW: ПК — полный цикл, мобилки — один статический кадр
+  if (lowPowerMode) {
+    // один раз рисуем фон
+    renderBackground(performance.now());
+  } else {
+    requestAnimationFrame(renderBackground);
+    requestAnimationFrame(renderFx);
+  }
 }
 
 // Старт анимации интро
