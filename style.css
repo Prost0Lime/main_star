@@ -79,3 +79,24 @@ box-shadow:0 0 16px rgba(255,126,191,.8),0 0 34px rgba(255,114,185,.45)}
 .audio-toggle.on{background:rgba(40,64,120,.6);box-shadow:0 12px 32px rgba(20,40,80,.45)}
 .audio-toggle:focus-visible{outline:2px solid rgba(255,255,255,.65);outline-offset:3px}
 .audio-toggle:active{transform:scale(.95)}
+
+
+#stars-layer.heart-mode .star {
+  animation: none; /* без @keyframes twinkle */
+}
+
+html.low-power #stars-layer.heart-mode .star {
+  box-shadow: 0 0 12px rgba(170, 200, 255, .6),
+              0 0 28px rgba(120, 160, 255, .35);
+}
+
+html.low-power #stars-layer.heart-mode .star::before,
+html.low-power #stars-layer.heart-mode .star::after {
+  opacity: .6;
+  filter: none;
+}
+
+/* при сердце оставляем только мягкое пульсирование, если нужно */
+html.low-power .star.heart-star {
+  animation: heartPulse 3.4s ease-in-out infinite;
+}

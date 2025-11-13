@@ -416,9 +416,11 @@ function startIntroTimeline(){
   if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 1, duration: 3.8, ease: 'sine.inOut' }, starRevealCue);
   if (celestial) introTimeline.to(celestial, { opacity: 1, duration: 4.2, ease: 'sine.inOut' }, starRevealCue + 0.4);
   if (nebula) introTimeline.to(nebula, { opacity: 0.42, duration: 4.4, ease: 'sine.out' }, starRevealCue + 0.8);
-  introTimeline.add(() => {
-    if (!backgroundStarted) initBackground();
-  }, backgroundCue);
+  if (!lowPowerMode) {
+    introTimeline.add(() => {
+      if (!backgroundStarted) initBackground();
+    }, backgroundCue);
+  }
   if (introStarsGroup) introTimeline.to(introStarsGroup, { opacity: 0, duration: 2.2, ease: 'power1.inOut' }, starFadeCue);
   if (intro) introTimeline.to(intro, { opacity: 0, duration: 2.4, ease: 'power1.in' }, introFadeCue);
 }
